@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0f1115;
+  --foreground: #e7e9ee;
+  --panel: #171a21;
+  --panel-2: #1f232c;
+  --border: #2a2f3a;
+  --accent: #ff5a3c; /* 유튜브 레드 톤 */
+  --accent-2: #4f8cff;
+  --muted: #9aa3b2;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+html,
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Malgun Gothic",
+    "Apple SD Gothic Neo", Roboto, "Noto Sans KR", sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
