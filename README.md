@@ -58,6 +58,7 @@ output/<slug>/
 
 ## Vercel 배포
 
-- Root Directory: `youtue-jjangsaem`
+- GitHub repo: https://github.com/haemiru/youtube-jjangsaem (독립 repo)
+- Vercel 에서 이 repo import → Root Directory: `./` (Framework: Next.js 자동 감지)
 - 환경변수: `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`
 - 서버리스 환경에서는 `output/` 로컬 저장이 불가하므로 **ZIP 다운로드**를 사용하세요.
