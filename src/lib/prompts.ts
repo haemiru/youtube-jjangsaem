@@ -40,6 +40,9 @@ export const TTS_RULES = `대본 작성 규칙 (Google AI Studio TTS 단독 보�
 - 문장 길이를 의도적으로 변주(짧·짧·긴 리듬). 같은 길이 문장 3연속 금지.
 - 도입 금지문구: "안녕하세요", "오늘은 ~에 대해 알아보겠습니다", "이번 영상에서는".`;
 
+/** 롱폼/숏폼 구분 */
+export type VideoFormat = "long" | "short";
+
 /** 영상 구조·리텐션 규칙 (2026 발달/육아 채널 기준) */
 export const SCRIPT_STRUCTURE = `영상 구조·이탈 방지 규칙 (육아·치료에 지친 시청자 기준):
 - 분량: 공백 제외 한국어 발화 기준 분당 약 300~350자. (예: 8분 영상 ≈ 2,400~2,800자)
@@ -47,6 +50,14 @@ export const SCRIPT_STRUCTURE = `영상 구조·이탈 방지 규칙 (육아·�
   예) "STNR, 대칭성 긴장성 목 반사가 안 빠지면 아이가 똑바로 앉지 못합니다. 오늘 집에서 3분 만에 체크하는 법을 알려드릴게요."
 - [본론 / 30초~7분] 핵심 요점을 3가지 이내로 쪼갠다. 전문 용어(TLR, ATNR 등)가 나오면 반드시 그 자리에서 쉬운 말로 풀고, 해당 슬라이드(시각자료)가 그 설명을 받친다고 전제하고 쓴다. 매 20~30초마다 화면 전환·예시·반전 등 '패턴 브레이크'가 들어갈 지점을 의식해 리듬을 끊어준다.
 - [아웃트로 / 7~8분] 핵심을 요약한 뒤, 무거운 구독 요청 대신 "이 원리를 알았다면 다음은 이 영상을 보세요"로 다음 단계 영상(엔드스크린)으로 연결해 연쇄 시청을 유도한다.`;
+
+/** 숏폼(YouTube Shorts/릴스) 구조 규칙 — 60초 미만 */
+export const SHORTS_STRUCTURE = `숏폼(YouTube Shorts) 구조 규칙 (60초 미만, 짧고 빠른 호흡):
+- 분량: 공백 제외 한국어 발화 기준 총 250~320자(약 45~55초). 절대 60초를 넘기지 말 것.
+- [0~3초 훅] 첫 문장에서 즉시 가장 센 통점·반전을 던져 스크롤을 멈추게 한다. 인사·채널 소개·도입부 일절 금지.
+- [본론] 메시지는 '핵심 하나'만. 곁가지·부연·예시 나열 금지. 짧게 끊어지는 문장으로 빠른 템포 유지. 전문 용어가 꼭 필요하면 한 단어로만 풀고 바로 넘어간다.
+- [마무리 3~5초] 여운 남기는 한 줄 + 가벼운 행동 유도(저장·팔로우 중 하나만, 한 번만) + "자세한 건 풀영상에서" 식 풀버전 유도 1줄.
+- 단정적 인과("무조건 좋아집니다") 금지. 짧아도 개별 차이는 한 번 짚는다.`;
 
 function blogContext(blog: ParsedBlog): string {
   const slotLines = blog.imageSlots
@@ -89,8 +100,9 @@ export interface ScriptResult {
 
 export function buildScriptPrompt(
   blog: ParsedBlog,
-  opts: { minutes: number }
+  opts: { format: VideoFormat; minutes: number }
 ): string {
+  if (opts.format === "short") return buildShortsScriptPrompt(blog);
   return `${PERSONA}
 
 ${HOOK_PATTERNS}
@@ -120,6 +132,42 @@ ${SCRIPT_STRUCTURE}
   "slides": [
     { "imageRef": null, "heading": "인트로(Hook)", "seconds": 10, "narration": "..." },
     { "imageRef": 1, "heading": "...", "seconds": 45, "narration": "..." }
+  ]
+}
+\`\`\`
+
+${blogContext(blog)}`;
+}
+
+/** 숏폼(60초 미만) 대본 — 핵심 하나만 압축 */
+export function buildShortsScriptPrompt(blog: ParsedBlog): string {
+  return `${PERSONA}
+
+${HOOK_PATTERNS}
+
+${TTS_RULES}
+
+${SHORTS_STRUCTURE}
+
+[작업]
+아래 네이버 블로그 글 한 편에서 '가장 임팩트 있는 핵심 하나'만 뽑아, 짱샘이 혼자 내레이션하는 60초 미만 유튜브 숏폼 대본으로 압축한다.
+시각 트랙은 본문 인포그래픽 슬라이드 중 핵심을 받치는 2~4장만 골라 쓴다(전부 쓰지 말 것).
+- 맨 앞 imageRef=null 인 훅 1개: 0~3초, 스크롤을 멈추게 하는 강한 첫 문장(Hook 패턴 A~J 중 가장 센 것).
+- 본론은 핵심 슬라이드 2~4컷. 각 slide 의 narration 은 1~3문장으로 짧게.
+- 맨 끝 imageRef=null 인 마무리 1개: 여운 한 줄 + 저장·팔로우 중 하나만 가볍게 + "자세한 건 풀영상에서" 식 1줄.
+- 전체 발화 분량: 공백 제외 한국어 기준 총 250~320자(약 45~55초). 절대 초과 금지.
+- 본문을 그대로 베끼지 말고 말로 설명하듯 재구성. 단정적 인과 금지.
+
+[출력 — 반드시 아래 JSON 한 덩어리만, 코드펜스로 감싸서]
+\`\`\`json
+{
+  "videoTitleWorking": "영상 내부용 작업 제목",
+  "hookPattern": "A~J 중 한 글자",
+  "hookPatternLabel": "패턴 한국어 라벨",
+  "estimatedMinutes": 1,
+  "slides": [
+    { "imageRef": null, "heading": "훅", "seconds": 3, "narration": "..." },
+    { "imageRef": 1, "heading": "...", "seconds": 12, "narration": "..." }
   ]
 }
 \`\`\`
@@ -251,7 +299,20 @@ export function extractJson<T>(text: string): T {
  * 이미지 프롬프트 — 블로그용 → 유튜브 슬라이드용 보정 (코드 레벨, Claude 불필요)
  * ──────────────────────────────────────────────────────────────── */
 
-export function adaptImagePromptForYoutube(prompt: string): string {
+export function adaptImagePromptForYoutube(
+  prompt: string,
+  format: VideoFormat = "long"
+): string {
+  if (format === "short") {
+    // 숏폼: 정사각(1:1) 인포그래픽 슬라이드
+    return prompt
+      .replace(/suitable for blog reading on mobile/gi, "suitable for a full-screen 1:1 square YouTube Shorts slide")
+      .replace(/suitable for a mobile feed thumbnail/gi, "suitable for a 1:1 square YouTube Shorts slide")
+      .replace(/16:9 1280x720 aspect ratio/gi, "1:1 1080x1080 square aspect ratio")
+      .replace(/16:9 1920x1080 aspect ratio/gi, "1:1 1080x1080 square aspect ratio")
+      .replace(/16:9 aspect ratio/gi, "1:1 1080x1080 square aspect ratio")
+      .trim();
+  }
   return prompt
     .replace(/suitable for blog reading on mobile/gi, "suitable for a full-screen YouTube explainer video slide")
     .replace(/suitable for a mobile feed thumbnail/gi, "suitable for a full-screen YouTube video slide")

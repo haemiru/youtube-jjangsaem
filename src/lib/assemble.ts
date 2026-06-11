@@ -5,6 +5,7 @@ import {
   type ScriptResult,
   type MetadataResult,
   type ThumbnailResult,
+  type VideoFormat,
 } from "./prompts";
 
 /** 영상 폴더용 slug. 영문 슬러그가 마땅찮으면 제목 일부 + 타임스탬프(인자) */
@@ -145,18 +146,23 @@ ${meta.pinnedComment ? `■ 고정댓글 후보\n${meta.pinnedComment}\n` : ""}`
 /** 슬라이드 + 썸네일 이미지 프롬프트 모음 (수동 생성용) */
 export function buildImagePromptsTxt(
   blog: ParsedBlog,
-  thumb: ThumbnailResult | null
+  thumb: ThumbnailResult | null,
+  format: VideoFormat = "long"
 ): string {
+  const ratioNote =
+    format === "short"
+      ? "# 원본 블로그 내장 프롬프트를 숏폼 1:1 1080x1080 으로 보정함"
+      : "# 원본 블로그 내장 프롬프트를 유튜브 16:9 1920x1080 으로 보정함";
   const parts: string[] = [
     "# 인포그래픽 슬라이드 이미지 프롬프트 (Gemini / Google Flow 수동 생성용)",
-    "# 원본 블로그 내장 프롬프트를 유튜브 16:9 1920x1080 으로 보정함",
+    ratioNote,
     "",
   ];
   for (const slot of blog.imageSlots) {
     const n = String(slot.index).padStart(2, "0");
     parts.push(
       `## slide-${n}  [${slot.type}]${slot.isHero ? "  ⭐대표/썸네일 후보" : ""}`,
-      adaptImagePromptForYoutube(slot.prompt),
+      adaptImagePromptForYoutube(slot.prompt, format),
       ""
     );
   }

@@ -10,6 +10,7 @@ import {
   type ScriptResult,
   type MetadataResult,
   type ThumbnailResult,
+  type VideoFormat,
 } from "@/lib/prompts";
 import {
   videoSlug,
@@ -28,7 +29,9 @@ export default function Home() {
   const [rawTxt, setRawTxt] = useState("");
   const [blog, setBlog] = useState<ParsedBlog | null>(null);
   const [parseErr, setParseErr] = useState("");
+  const [format, setFormat] = useState<VideoFormat>("long");
   const [minutes, setMinutes] = useState(8);
+  const isShort = format === "short";
 
   const [script, setScript] = useState<ScriptResult | null>(null);
   const [metadata, setMetadata] = useState<MetadataResult | null>(null);
@@ -38,9 +41,19 @@ export default function Home() {
   const [saveMsg, setSaveMsg] = useState("");
 
   const scriptPrompt = useMemo(
-    () => (blog ? buildScriptPrompt(blog, { minutes }) : ""),
-    [blog, minutes]
+    () => (blog ? buildScriptPrompt(blog, { format, minutes }) : ""),
+    [blog, format, minutes]
   );
+
+  // 포맷 전환 시 대본은 구조가 다르므로 초기화. 숏폼이면 썸네일도 비움.
+  function changeFormat(f: VideoFormat) {
+    setFormat(f);
+    setScript(null);
+    if (f === "short") {
+      setThumbnail(null);
+      setThumbImage(null);
+    }
+  }
   const metadataPrompt = useMemo(() => (blog ? buildMetadataPrompt(blog) : ""), [blog]);
   const thumbnailPrompt = useMemo(() => (blog ? buildThumbnailPrompt(blog) : ""), [blog]);
 
@@ -82,7 +95,7 @@ export default function Home() {
       files.push({ path: "script-spaced.txt", content: buildScriptSpacedTxt(scriptTxt) });
     }
     if (metadata) files.push({ path: "metadata.txt", content: buildMetadataTxt(metadata) });
-    if (blog) files.push({ path: "images/prompts.txt", content: buildImagePromptsTxt(blog, thumbnail) });
+    if (blog) files.push({ path: "images/prompts.txt", content: buildImagePromptsTxt(blog, thumbnail, format) });
     for (const [idx, dataUrl] of Object.entries(slideImages)) {
       files.push({
         path: `images/slide-${String(idx).padStart(2, "0")}.png`,
@@ -186,26 +199,52 @@ export default function Home() {
 
       {/* STEP 2 — 대본 */}
       <Card title="대본 (짱샘 단독 내레이션)" step={2} done={!!script} disabled={!blog}>
-        <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 4 }}>
-          <span style={{ fontSize: 13, color: "var(--muted)" }}>영상 길이</span>
-          <input
-            type="number"
-            min={3}
-            max={20}
-            value={minutes}
-            onChange={(e) => setMinutes(Number(e.target.value))}
-            style={{
-              width: 64,
-              background: "var(--panel-2)",
-              color: "var(--foreground)",
-              border: "1px solid var(--border)",
-              borderRadius: 6,
-              padding: "6px 8px",
-              fontSize: 13,
-            }}
-          />
-          <span style={{ fontSize: 13, color: "var(--muted)" }}>분</span>
+        <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12 }}>
+          {(["long", "short"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => changeFormat(f)}
+              style={{
+                background: format === f ? "var(--accent)" : "var(--panel-2)",
+                color: format === f ? "#fff" : "var(--muted)",
+                border: "1px solid var(--border)",
+                borderRadius: 8,
+                padding: "7px 16px",
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {f === "long" ? "🎬 롱폼" : "⚡ 숏폼 (60초 미만)"}
+            </button>
+          ))}
         </div>
+        {isShort ? (
+          <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 4 }}>
+            숏폼: 대본 약 1분 미만(60초) · 핵심 하나만 압축 · 썸네일 단계 생략 · 이미지 1:1
+          </div>
+        ) : (
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 4 }}>
+            <span style={{ fontSize: 13, color: "var(--muted)" }}>영상 길이</span>
+            <input
+              type="number"
+              min={3}
+              max={20}
+              value={minutes}
+              onChange={(e) => setMinutes(Number(e.target.value))}
+              style={{
+                width: 64,
+                background: "var(--panel-2)",
+                color: "var(--foreground)",
+                border: "1px solid var(--border)",
+                borderRadius: 6,
+                padding: "6px 8px",
+                fontSize: 13,
+              }}
+            />
+            <span style={{ fontSize: 13, color: "var(--muted)" }}>분</span>
+          </div>
+        )}
         {blog && (
           <ClaudeStep<ScriptResult>
             prompt={scriptPrompt}
@@ -269,7 +308,8 @@ export default function Home() {
         )}
       </Card>
 
-      {/* STEP 4 — 썸네일 */}
+      {/* STEP 4 — 썸네일 (숏폼은 생략) */}
+      {!isShort && (
       <Card title="썸네일 (문구 + 이미지)" step={4} done={!!thumbnail} disabled={!blog}>
         {blog && (
           <ClaudeStep<ThumbnailResult>
@@ -301,14 +341,17 @@ export default function Home() {
           />
         )}
       </Card>
+      )}
 
       {/* STEP 5 — 인포그래픽 이미지 */}
-      <Card title={`인포그래픽 슬라이드 이미지${blog ? ` (${blog.imageSlots.length}장)` : ""}`} step={5} disabled={!blog}>
+      <Card title={`인포그래픽 슬라이드 이미지${blog ? ` (${blog.imageSlots.length}장)` : ""}`} step={isShort ? 4 : 5} disabled={!blog}>
         <p style={{ fontSize: 12.5, color: "var(--muted)", margin: "0 0 12px" }}>
-          블로그 내장 프롬프트를 유튜브 16:9 로 보정했습니다. 슬라이드별로 자동(Gemini) 또는 수동(Google Flow)을 선택하세요.
+          {isShort
+            ? "블로그 내장 프롬프트를 숏폼 1:1 로 보정했습니다. 슬라이드별로 자동(Gemini) 또는 수동(Google Flow)을 선택하세요."
+            : "블로그 내장 프롬프트를 유튜브 16:9 로 보정했습니다. 슬라이드별로 자동(Gemini) 또는 수동(Google Flow)을 선택하세요."}
         </p>
         {blog?.imageSlots.map((slot) => {
-          const p = adaptImagePromptForYoutube(slot.prompt);
+          const p = adaptImagePromptForYoutube(slot.prompt, format);
           return (
             <div key={slot.index} style={{ borderTop: "1px solid var(--border)", padding: "14px 0" }}>
               <div style={{ fontSize: 13, color: "var(--accent-2)", marginBottom: 8 }}>
@@ -320,6 +363,7 @@ export default function Home() {
                 filename={`${slug}-slide-${String(slot.index).padStart(2, "0")}.png`}
                 value={slideImages[slot.index] ?? null}
                 onResult={(d) => setSlideImages((prev) => ({ ...prev, [slot.index]: d }))}
+                aspectRatio={isShort ? "1:1" : "16:9"}
                 compact
               />
             </div>
@@ -328,9 +372,9 @@ export default function Home() {
       </Card>
 
       {/* STEP 6 — 산출물 */}
-      <Card title="산출물 저장 / 다운로드" step={6} disabled={!blog}>
+      <Card title="산출물 저장 / 다운로드" step={isShort ? 5 : 6} disabled={!blog}>
         <p style={{ fontSize: 13, color: "var(--muted)", margin: "0 0 12px" }}>
-          폴더명: <b style={{ color: "var(--foreground)" }}>output/{slug}/</b> — script.txt · script-spaced.txt · metadata.txt · images/ · thumbnail/
+          폴더명: <b style={{ color: "var(--foreground)" }}>output/{slug}/</b> — script.txt · script-spaced.txt · metadata.txt · images/{isShort ? "" : " · thumbnail/"}
         </p>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
           <Button onClick={onSave} disabled={!script && !metadata}>💾 로컬 output 폴더에 저장</Button>
