@@ -242,59 +242,31 @@ export interface ThumbnailResult {
   miniCopyRight: string;
 }
 
-/** 인포그래픽 프롬프트에서 스타일 도입부(첫 유효 줄) 추출 — 썸네일 화풍 고정용 */
-function extractStyleLine(prompt: string): string {
-  const first = prompt
-    .split("\n")
-    .map((l) => l.trim())
-    .find(Boolean);
-  return (
-    first ??
-    "Educational infographic illustration in a warm Korean parenting magazine style, soft flat shapes with gentle gradient shading, single bold central visual."
-  );
-}
-
-/** 인포그래픽 프롬프트에서 Avoid: 네거티브 라인 추출 — 썸네일에 그대로 계승 */
-function extractAvoidLine(prompt: string): string {
-  const line = prompt
-    .split("\n")
-    .map((l) => l.trim())
-    .find((l) => /^avoid:/i.test(l));
-  return (
-    line ??
-    "Avoid: photorealistic rendering, real photograph, 3D rendering, hyperrealistic textures, harsh shadows, busy cluttered background, lens flare, depth-of-field blur, AI photo look, gritty textures, dark moody atmosphere, illegible tiny text, garbled fake-looking text, distorted Korean characters, wrong language characters mixed with Korean, watermark."
-  );
-}
-
 export function buildThumbnailPrompt(blog: ParsedBlog): string {
   const hero = blog.imageSlots.find((s) => s.isHero) ?? blog.imageSlots[0];
-  const styleLine = extractStyleLine(hero?.prompt ?? "");
-  const avoidLine = extractAvoidLine(hero?.prompt ?? "");
   return `${PERSONA}
 
 [작업]
 아래 블로그 기반 유튜브 영상의 썸네일을 설계한다.
-이 채널의 모든 인포그래픽 슬라이드는 '부드러운 한국 육아 매거진풍 카툰 인포그래픽' 한 가지 화풍으로 통일돼 있다. 썸네일도 반드시 슬라이드와 똑같은 '화풍·색감'으로 만들어 브랜드 일관성을 지킨다(실사·3D·과장 그림 금지). 단, 슬라이드는 본문용이라 여백이 넉넉하지만 썸네일은 다르다 — 썸네일은 피드 작은 화면에서도 한눈에 읽히도록 '핵심 인물 하나를 크게, 프레임을 꽉 채워' 배치한다.
+썸네일은 본문 슬라이드(카툰 인포그래픽)와 달리, 피드에서 클릭을 부르는 '실사풍 고품질 이미지'로 만든다. 납작한 일러스트가 아니라 디테일과 깊이가 있는 사실적인 장면으로, 영상 주제를 한눈에 전달한다.
 
 [썸네일 이미지 생성 규칙 — 반드시 지킬 것]
-1. 화풍만 계승: 아래 '채널 스타일'에서 화풍 키워드(한국 육아 매거진풍, 플랫·소프트 그라데이션, 카툰, 색감)만 가져온다. 단, "single central visual", "ample whitespace", "blog thumbnail card", "suitable for blog reading" 같은 '여백 많고 작은 카드' 구도 표현은 버리고 절대 따르지 않는다.
-   채널 스타일: "${styleLine}"
-2. 피사체는 크게 (가장 중요): 친근한 카툰 아이 '한 명'을 close-up 또는 medium close-up(가슴 위~상반신)으로 크게 그린다. 인물이 프레임 세로의 약 60~75%를 채워야 한다. 절대로 넓은 배경 한가운데 작게 떠 있게(full-body wide shot, tiny figure) 그리지 말 것. 표정은 주제에 맞되 과장·공포 금지(신뢰감·명확성 우선).
-3. 치우친 구도 + 제목 공간: 아이를 화면 한쪽(예: 오른쪽 약 55~60% 폭)에 크게 배치하고, 반대쪽(왼쪽 약 40%)을 제목 얹을 공간으로 비운다. 그 제목 공간은 텅 빈 흰 여백이 아니라 크림/코랄 톤의 부드러운 색면·완만한 그라데이션 패널로 채워 허전하지 않게 한다. 위아래 중앙 띄우기(centered floating) 금지.
-4. 시선 분리: 아이 가장자리에 아주 옅은 아웃라인 또는 소프트 글로우로 배경과 분리해 시선을 모은다.
-5. 텍스트 절대 금지: 이미지 안에 한글·영문·숫자·로고·워터마크를 일절 넣지 않는다(문구는 편집 단계에서 합성).
-6. 색감·비율: 따뜻한 코랄 포인트 + 크림/오프화이트 배경, 부드럽지만 고대비, 채도 살짝 높게. 16:9, 1920x1080.
-7. 네거티브 고정: imagePrompt 의 마지막 줄은 아래 '채널 네거티브'를 그대로 붙이고, 끝에 ", any text, any captions, any typography, Korean characters, English letters, numbers, logos, watermark, multiple characters, busy cluttered background, exaggerated scary expression, tiny figure, small subject lost in empty space, excessive blank background, subject floating in the center of a large empty background, full-body wide shot with large empty margins" 를 덧붙인다.
-   채널 네거티브: "${avoidLine}"
+1. 화풍: photorealistic(실사). 따뜻하고 영화 같은(cinematic) 자연광, 부드러운 실내 분위기. 한국 육아·발달 채널에 어울리는 사실적인 한국 아기/아이와 실제 같은 피부·옷감 질감. 납작한 플랫 일러스트·만화체·장난감 3D 렌더는 금지.
+2. 풍부한 장면(너무 단순 금지): 인물 뒤에 맥락이 느껴지는 환경을 얕은 심도(shallow depth of field, 배경 보케)로 깔아 깊이를 준다 — 예: 포근한 가정 거실, 햇살 드는 놀이방, 밝고 깨끗한 치료실 한켠. 상황을 암시하는 소품 1~2개는 OK, 단 산만하지 않게.
+3. 피사체는 크게 (가장 중요): 영상 핵심을 보여주는 한국 아이 '한 명'을 close-up~medium close-up 으로 크게. 인물이 프레임 세로의 약 60~75% 를 채운다. 넓은 배경에 작게 떠 있게(tiny figure, full-body wide shot) 금지. 표정·동작은 영상 주제와 직결되게(예: 까치발, 놀란 표정, 특정 앉은 자세) 하되 과장·공포는 지양하고 진정성 있게.
+4. 치우친 구도 + 제목 공간: 아이를 한쪽(예: 오른쪽 약 55~60% 폭)에 크게 배치하고, 반대쪽 약 40% 는 제목 얹을 공간으로 비운다 — 단 텅 빈 게 아니라 흐린 배경·은은한 빛으로 자연스럽게 채워 허전하지 않게. 위아래 중앙 띄우기(centered floating) 금지.
+5. 시선 유도·색감: 핵심 인물에 부드러운 림라이트/하이라이트로 시선을 모은다. 따뜻한 톤, 부드럽지만 고대비, 채도 약간 높게(피드에서 눈에 띄게).
+6. 텍스트 절대 금지: 이미지 안에 한글·영문·숫자·로고·워터마크를 일절 넣지 않는다(문구는 편집 단계에서 합성).
+7. 비율: 16:9, 1920x1080.
 
-- imagePrompt: 위 1~7 을 모두 반영한 '영문' 프롬프트(여러 줄). 화풍 문장으로 시작 → 크게·치우치게 배치한 장면 묘사 → 네거티브로 끝. 'large', 'close-up', 'fills most of the frame', 'placed on the right side' 같은 크기·구도 단어를 명시할 것.
-- negativePrompt: 7번에서 덧붙인 항목까지 합친 네거티브 문자열(영문).
+- imagePrompt: 위 1~7 을 모두 반영한 '영문' 프롬프트(여러 줄). photorealistic, cinematic warm lighting, shallow depth of field, detailed, large subject filling most of the frame, placed on the right side 같은 사실성·디테일·크기·구도 단어를 명시. 영상 주제의 핵심 행동/상황을 사실적 장면으로 묘사. 끝에 네거티브를 한 줄로 붙인다.
+- negativePrompt: 영문. 최소한 아래를 포함한다: "no text, no captions, no letters, no Korean characters, no numbers, no logos, no watermark, flat cartoon illustration, anime, plastic 3D toy render, extra fingers, deformed hands, distorted face, multiple identical children, busy cluttered background, tiny figure, subject floating in empty background, full-body wide shot with large empty margins, exaggerated scary expression, low quality, blurry".
 - phrases: 썸네일에 얹을 한국어 문구 5개. 핵심은 "3~4단어, 8~12자 내외, 제목의 요약이 아니라 감정·호기심·즉각적 이득 자극". 제목에 이미 있는 단어를 그대로 반복하지 말고 제목과 '보완' 관계로. 과한 어그로 금지(예: "우리 아이 자폐일까?"처럼 거부감 유발하는 직접 단정 금지). 5개를 서로 다른 패턴(호기심형/숫자형/질문형/반전형/결과형)으로. 느낌표·물음표 합쳐 최대 2개.
     좋은 예) "이것" 모르면 고생합니다 / "설마 우리 아이도?" / 똑바로 못 앉는 이유
 - miniCopyLeft: 좌측 상단 8자 이내 후크(예: "혹시 우리 아이도?").
 - miniCopyRight: "25년차 소아발달 재활 전문가" 고정.
 
-[원본 대표 인포그래픽 프롬프트 — 화풍·소재 참고용(이걸 그대로 베끼지 말고 1~6 규칙대로 썸네일용으로 재구성)]
+[원본 대표 인포그래픽 프롬프트 — '무엇을 보여줄지' 소재만 참고(카툰 화풍은 따르지 말 것, 같은 주제를 실사 장면으로 옮긴다)]
 ${hero?.prompt ?? "(없음)"}
 
 [출력 — JSON 한 덩어리만, 코드펜스로 감싸서]
