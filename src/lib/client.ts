@@ -13,11 +13,14 @@ export async function callClaude(prompt: string, maxTokens?: number): Promise<st
   return data.text as string;
 }
 
-export async function callGeminiImage(prompt: string): Promise<string> {
+export async function callGeminiImage(
+  prompt: string,
+  aspectRatio: "16:9" | "9:16" | "1:1" | "4:3" | "3:4" = "16:9"
+): Promise<string> {
   const res = await fetch("/api/gemini-image", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ prompt }),
+    body: JSON.stringify({ prompt, aspectRatio }),
   });
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || "이미지 생성 실패");

@@ -1,7 +1,11 @@
 /** 서버 전용 — Gemini 이미지 생성 (API 키는 서버에만 존재) */
 import { GoogleGenAI } from "@google/genai";
 
-export const IMAGE_MODEL = "gemini-2.5-flash-image";
+// gemini-3.1-flash-image-preview: 2.5 대비 이미지 내 한글 텍스트 렌더링이 크게 개선됨.
+export const IMAGE_MODEL = "gemini-3.1-flash-image-preview";
+
+/** Gemini 이미지 모델이 지원하는 종횡비 */
+export type AspectRatio = "16:9" | "9:16" | "1:1" | "4:3" | "3:4";
 
 let client: GoogleGenAI | null = null;
 function getClient(): GoogleGenAI {
@@ -17,10 +21,15 @@ export interface GeneratedImage {
   mimeType: string;
 }
 
-export async function generateImage(prompt: string): Promise<GeneratedImage> {
+export async function generateImage(
+  prompt: string,
+  aspectRatio: AspectRatio = "16:9"
+): Promise<GeneratedImage> {
   const res = await getClient().models.generateContent({
     model: IMAGE_MODEL,
     contents: prompt,
+    // 프롬프트 문자열만으론 모델이 비율을 잘 안 지킴 → API 파라미터로 강제.
+    config: { imageConfig: { aspectRatio } },
   });
 
   const parts = res.candidates?.[0]?.content?.parts ?? [];

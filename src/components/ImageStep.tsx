@@ -14,12 +14,14 @@ export function ImageStep({
   value,
   onResult,
   compact,
+  aspectRatio = "16:9",
 }: {
   prompt: string;
   filename: string;
   value: string | null;
   onResult: (dataUrl: string) => void;
   compact?: boolean;
+  aspectRatio?: "16:9" | "9:16" | "1:1" | "4:3" | "3:4";
 }) {
   const [mode, setMode] = useState<"auto" | "manual">("auto");
   const [loading, setLoading] = useState(false);
@@ -29,7 +31,7 @@ export function ImageStep({
     setLoading(true);
     setError("");
     try {
-      onResult(await callGeminiImage(prompt));
+      onResult(await callGeminiImage(prompt, aspectRatio));
     } catch (e) {
       setError(e instanceof Error ? e.message : "이미지 생성 실패");
     } finally {
