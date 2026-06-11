@@ -261,8 +261,10 @@ export function buildThumbnailPrompt(blog: ParsedBlog): string {
 
 - imagePrompt: 위 1~7 을 모두 반영한 '영문' 프롬프트(여러 줄). photorealistic, cinematic warm lighting, shallow depth of field, detailed, large subject filling most of the frame, placed on the right side 같은 사실성·디테일·크기·구도 단어를 명시. 영상 주제의 핵심 행동/상황을 사실적 장면으로 묘사. 끝에 네거티브를 한 줄로 붙인다.
 - negativePrompt: 영문. 최소한 아래를 포함한다: "no text, no captions, no letters, no Korean characters, no numbers, no logos, no watermark, flat cartoon illustration, anime, plastic 3D toy render, extra fingers, deformed hands, distorted face, multiple identical children, busy cluttered background, tiny figure, subject floating in empty background, full-body wide shot with large empty margins, exaggerated scary expression, low quality, blurry".
-- phrases: 썸네일에 얹을 한국어 문구 5개. 핵심은 "3~4단어, 8~12자 내외, 제목의 요약이 아니라 감정·호기심·즉각적 이득 자극". 제목에 이미 있는 단어를 그대로 반복하지 말고 제목과 '보완' 관계로. 과한 어그로 금지(예: "우리 아이 자폐일까?"처럼 거부감 유발하는 직접 단정 금지). 5개를 서로 다른 패턴(호기심형/숫자형/질문형/반전형/결과형)으로. 느낌표·물음표 합쳐 최대 2개.
-    좋은 예) "이것" 모르면 고생합니다 / "설마 우리 아이도?" / 똑바로 못 앉는 이유
+- phrases: 썸네일에 얹을 한국어 '메인 문구' 후보 5개 (이 중 하나를 골라 쓰는 용도, 나머지는 A/B 테스트 예비). 제목의 요약이 아니라 감정·호기심·즉각적 이득을 때리는 카피.
+  · 길이·형식: 너무 짧아 밋밋하지 않게, 한 줄이면 12~18자, 또는 '큰 줄 + 받는 줄' 두 줄 구조(각 줄 8~14자)로. 두 줄일 때는 줄바꿈을 \\n 으로 표시. 핵심 단어가 한눈에 크게 읽히도록 군더더기 조사·접속어는 빼고 압축.
+  · 제목에 이미 있는 단어를 그대로 반복하지 말고 제목과 '보완' 관계로. 과한 어그로 금지(예: "우리 아이 자폐일까?"처럼 거부감 유발하는 직접 단정 금지). 5개를 서로 다른 패턴(호기심형/숫자형/질문형/반전형/결과형)으로. 느낌표·물음표는 후보당 최대 2개.
+    좋은 예) "잘 놀라는 아이\\n혹시 이 반사 때문?" / "밤마다 깨는 진짜 이유" / "치료실에선 안 알려주는 3가지" / "이 자세, 그냥 두면 안 됩니다"
 - miniCopyLeft: 좌측 상단 8자 이내 후크(예: "혹시 우리 아이도?").
 - miniCopyRight: "25년차 소아발달 재활 전문가" 고정.
 

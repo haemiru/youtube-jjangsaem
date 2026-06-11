@@ -323,7 +323,7 @@ export default function Home() {
                 <b>썸네일 문구 후보</b>
                 <ol style={{ margin: "6px 0 14px", paddingLeft: 20 }}>
                   {r.phrases.map((p, i) => (
-                    <li key={i}>{p}</li>
+                    <li key={i} style={{ whiteSpace: "pre-line" }}>{p}</li>
                   ))}
                 </ol>
                 <div style={{ color: "var(--muted)", marginBottom: 14 }}>
