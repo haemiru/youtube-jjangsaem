@@ -274,20 +274,21 @@ export function buildThumbnailPrompt(blog: ParsedBlog): string {
 
 [작업]
 아래 블로그 기반 유튜브 영상의 썸네일을 설계한다.
-이 채널의 모든 인포그래픽 슬라이드는 '부드러운 한국 육아 매거진풍 카툰 인포그래픽' 한 가지 화풍으로 통일돼 있다. 썸네일도 반드시 슬라이드와 똑같은 화풍·색감으로 만들어 브랜드 일관성을 지킨다. 슬라이드와 따로 노는 실사·3D·과장된 그림은 절대 금지. 단, 썸네일은 피드에서 눈에 띄도록 '핵심 인물 하나'를 크고 단순하게 배치한다.
+이 채널의 모든 인포그래픽 슬라이드는 '부드러운 한국 육아 매거진풍 카툰 인포그래픽' 한 가지 화풍으로 통일돼 있다. 썸네일도 반드시 슬라이드와 똑같은 '화풍·색감'으로 만들어 브랜드 일관성을 지킨다(실사·3D·과장 그림 금지). 단, 슬라이드는 본문용이라 여백이 넉넉하지만 썸네일은 다르다 — 썸네일은 피드 작은 화면에서도 한눈에 읽히도록 '핵심 인물 하나를 크게, 프레임을 꽉 채워' 배치한다.
 
 [썸네일 이미지 생성 규칙 — 반드시 지킬 것]
-1. 화풍 고정: imagePrompt 의 첫 줄은 아래 '채널 스타일' 문장을 토씨 하나 바꾸지 말고 그대로 사용한다.
+1. 화풍만 계승: 아래 '채널 스타일'에서 화풍 키워드(한국 육아 매거진풍, 플랫·소프트 그라데이션, 카툰, 색감)만 가져온다. 단, "single central visual", "ample whitespace", "blog thumbnail card", "suitable for blog reading" 같은 '여백 많고 작은 카드' 구도 표현은 버리고 절대 따르지 않는다.
    채널 스타일: "${styleLine}"
-2. 단일 포커스(One Focal Point): 복잡한 배경·여러 인물·소품 나열 금지. 깨끗한 오프화이트(크림) 배경 위에, 영상 핵심을 한눈에 보여주는 '친근한 카툰 아이 한 명'만 크게 중앙~약간 아래에 배치. 표정은 영상 주제에 맞되 과장·공포 금지(자극적 표정 지양, 신뢰감·명확성 우선).
-3. 시선 분리: 아이 가장자리에 아주 옅은 아웃라인 또는 소프트 글로우를 줘 배경과 분리하고 시선을 모은다.
-4. 텍스트 절대 금지: 이미지 안에 한글·영문·숫자·로고·워터마크를 일절 넣지 않는다(문구는 편집 단계에서 합성). 화면 상단 1/3 은 제목을 얹을 수 있게 비워 둔다(아이를 상단까지 키우지 말 것).
-5. 색감·비율: 따뜻한 코랄 포인트 + 크림/오프화이트 배경, 부드럽지만 고대비, 채도 살짝 높게. 16:9, 1920x1080.
-6. 네거티브 고정: imagePrompt 의 마지막 줄은 아래 '채널 네거티브'를 그대로 붙이고, 끝에 ", any text, any captions, any typography, Korean characters, English letters, numbers, logos, watermark, multiple characters, busy cluttered background, exaggerated scary expression" 를 덧붙인다.
+2. 피사체는 크게 (가장 중요): 친근한 카툰 아이 '한 명'을 close-up 또는 medium close-up(가슴 위~상반신)으로 크게 그린다. 인물이 프레임 세로의 약 60~75%를 채워야 한다. 절대로 넓은 배경 한가운데 작게 떠 있게(full-body wide shot, tiny figure) 그리지 말 것. 표정은 주제에 맞되 과장·공포 금지(신뢰감·명확성 우선).
+3. 치우친 구도 + 제목 공간: 아이를 화면 한쪽(예: 오른쪽 약 55~60% 폭)에 크게 배치하고, 반대쪽(왼쪽 약 40%)을 제목 얹을 공간으로 비운다. 그 제목 공간은 텅 빈 흰 여백이 아니라 크림/코랄 톤의 부드러운 색면·완만한 그라데이션 패널로 채워 허전하지 않게 한다. 위아래 중앙 띄우기(centered floating) 금지.
+4. 시선 분리: 아이 가장자리에 아주 옅은 아웃라인 또는 소프트 글로우로 배경과 분리해 시선을 모은다.
+5. 텍스트 절대 금지: 이미지 안에 한글·영문·숫자·로고·워터마크를 일절 넣지 않는다(문구는 편집 단계에서 합성).
+6. 색감·비율: 따뜻한 코랄 포인트 + 크림/오프화이트 배경, 부드럽지만 고대비, 채도 살짝 높게. 16:9, 1920x1080.
+7. 네거티브 고정: imagePrompt 의 마지막 줄은 아래 '채널 네거티브'를 그대로 붙이고, 끝에 ", any text, any captions, any typography, Korean characters, English letters, numbers, logos, watermark, multiple characters, busy cluttered background, exaggerated scary expression, tiny figure, small subject lost in empty space, excessive blank background, subject floating in the center of a large empty background, full-body wide shot with large empty margins" 를 덧붙인다.
    채널 네거티브: "${avoidLine}"
 
-- imagePrompt: 위 1~6 을 모두 반영한 '영문' 프롬프트(여러 줄). 1번 스타일 문장으로 시작 → 2~5의 장면 묘사 → 6번 네거티브로 끝.
-- negativePrompt: 6번에서 덧붙인 항목까지 합친 네거티브 문자열(영문).
+- imagePrompt: 위 1~7 을 모두 반영한 '영문' 프롬프트(여러 줄). 화풍 문장으로 시작 → 크게·치우치게 배치한 장면 묘사 → 네거티브로 끝. 'large', 'close-up', 'fills most of the frame', 'placed on the right side' 같은 크기·구도 단어를 명시할 것.
+- negativePrompt: 7번에서 덧붙인 항목까지 합친 네거티브 문자열(영문).
 - phrases: 썸네일에 얹을 한국어 문구 5개. 핵심은 "3~4단어, 8~12자 내외, 제목의 요약이 아니라 감정·호기심·즉각적 이득 자극". 제목에 이미 있는 단어를 그대로 반복하지 말고 제목과 '보완' 관계로. 과한 어그로 금지(예: "우리 아이 자폐일까?"처럼 거부감 유발하는 직접 단정 금지). 5개를 서로 다른 패턴(호기심형/숫자형/질문형/반전형/결과형)으로. 느낌표·물음표 합쳐 최대 2개.
     좋은 예) "이것" 모르면 고생합니다 / "설마 우리 아이도?" / 똑바로 못 앉는 이유
 - miniCopyLeft: 좌측 상단 8자 이내 후크(예: "혹시 우리 아이도?").
