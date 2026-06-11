@@ -242,26 +242,58 @@ export interface ThumbnailResult {
   miniCopyRight: string;
 }
 
+/** 인포그래픽 프롬프트에서 스타일 도입부(첫 유효 줄) 추출 — 썸네일 화풍 고정용 */
+function extractStyleLine(prompt: string): string {
+  const first = prompt
+    .split("\n")
+    .map((l) => l.trim())
+    .find(Boolean);
+  return (
+    first ??
+    "Educational infographic illustration in a warm Korean parenting magazine style, soft flat shapes with gentle gradient shading, single bold central visual."
+  );
+}
+
+/** 인포그래픽 프롬프트에서 Avoid: 네거티브 라인 추출 — 썸네일에 그대로 계승 */
+function extractAvoidLine(prompt: string): string {
+  const line = prompt
+    .split("\n")
+    .map((l) => l.trim())
+    .find((l) => /^avoid:/i.test(l));
+  return (
+    line ??
+    "Avoid: photorealistic rendering, real photograph, 3D rendering, hyperrealistic textures, harsh shadows, busy cluttered background, lens flare, depth-of-field blur, AI photo look, gritty textures, dark moody atmosphere, illegible tiny text, garbled fake-looking text, distorted Korean characters, wrong language characters mixed with Korean, watermark."
+  );
+}
+
 export function buildThumbnailPrompt(blog: ParsedBlog): string {
   const hero = blog.imageSlots.find((s) => s.isHero) ?? blog.imageSlots[0];
+  const styleLine = extractStyleLine(hero?.prompt ?? "");
+  const avoidLine = extractAvoidLine(hero?.prompt ?? "");
   return `${PERSONA}
 
 [작업]
 아래 블로그 기반 유튜브 영상의 썸네일을 설계한다.
-채널 톤은 부드러운 한국 육아 매거진풍 인포그래픽이다. 아래 원본 대표 인포그래픽 프롬프트의 스타일·색감을 계승하되, 유튜브 피드에서 눈에 띄도록 임팩트를 키운다.
+이 채널의 모든 인포그래픽 슬라이드는 '부드러운 한국 육아 매거진풍 카툰 인포그래픽' 한 가지 화풍으로 통일돼 있다. 썸네일도 반드시 슬라이드와 똑같은 화풍·색감으로 만들어 브랜드 일관성을 지킨다. 슬라이드와 따로 노는 실사·3D·과장된 그림은 절대 금지. 단, 썸네일은 피드에서 눈에 띄도록 '핵심 인물 하나'를 크고 단순하게 배치한다.
 
-요구사항 (2026 발달·아동 카테고리 추세: '자극적 표정' 지양, '신뢰감·명확성' 극대화. 유튜브 비전 모델이 썸네일을 직접 분석하므로 반드시 영상 내용과 직결된 직관적 이미지):
-- imagePrompt: 영문. 16:9, 1920x1080.
-  · 단일 포커스(One Focal Point) — 복잡한 배경이나 여러 인물 금지. 깔끔한 단색 또는 치료실/연구실 배경 위에, ① 발달 지연 아이의 특정 행동(예: 까치발, 독특한 앉은 자세) 또는 ② 신뢰감 있는 전문가의 모습 중 '하나만' 크게 배치.
-  · 핵심 인물·오브젝트에 미세한 아웃라인(Glow) 효과로 배경과 분리해 시선을 모은다.
-  · 채널 톤은 부드러운 한국 육아 매거진풍 카툰 인포그래픽. 따뜻한 고대비 색. 텍스트는 넣지 말 것(문구는 편집 단계 합성).
-- negativePrompt: 텍스트·로고·워터마크·실사 사진·3D·과장된 표정·여러 인물·산만한 배경을 강하게 배제.
-- phrases: 썸네일에 얹을 한국어 문구 5개. 핵심은 "3~4단어, 8~12자 내외, 제목의 요약이 아니라 감정·호기심·즉각적 이득 자극". 제목에 이미 있는 단어를 그대로 반복하지 말고 제목과 '보완' 관계로. 과한 어그로 금지(예: "우리 아이 자폐일까?"처럼 거부감 유발하는 직접 단정 금지). 느낌표·물음표 최대 2개.
+[썸네일 이미지 생성 규칙 — 반드시 지킬 것]
+1. 화풍 고정: imagePrompt 의 첫 줄은 아래 '채널 스타일' 문장을 토씨 하나 바꾸지 말고 그대로 사용한다.
+   채널 스타일: "${styleLine}"
+2. 단일 포커스(One Focal Point): 복잡한 배경·여러 인물·소품 나열 금지. 깨끗한 오프화이트(크림) 배경 위에, 영상 핵심을 한눈에 보여주는 '친근한 카툰 아이 한 명'만 크게 중앙~약간 아래에 배치. 표정은 영상 주제에 맞되 과장·공포 금지(자극적 표정 지양, 신뢰감·명확성 우선).
+3. 시선 분리: 아이 가장자리에 아주 옅은 아웃라인 또는 소프트 글로우를 줘 배경과 분리하고 시선을 모은다.
+4. 텍스트 절대 금지: 이미지 안에 한글·영문·숫자·로고·워터마크를 일절 넣지 않는다(문구는 편집 단계에서 합성). 화면 상단 1/3 은 제목을 얹을 수 있게 비워 둔다(아이를 상단까지 키우지 말 것).
+5. 색감·비율: 따뜻한 코랄 포인트 + 크림/오프화이트 배경, 부드럽지만 고대비, 채도 살짝 높게. 16:9, 1920x1080.
+6. 네거티브 고정: imagePrompt 의 마지막 줄은 아래 '채널 네거티브'를 그대로 붙이고, 끝에 ", any text, any captions, any typography, Korean characters, English letters, numbers, logos, watermark, multiple characters, busy cluttered background, exaggerated scary expression" 를 덧붙인다.
+   채널 네거티브: "${avoidLine}"
+
+- imagePrompt: 위 1~6 을 모두 반영한 '영문' 프롬프트(여러 줄). 1번 스타일 문장으로 시작 → 2~5의 장면 묘사 → 6번 네거티브로 끝.
+- negativePrompt: 6번에서 덧붙인 항목까지 합친 네거티브 문자열(영문).
+- phrases: 썸네일에 얹을 한국어 문구 5개. 핵심은 "3~4단어, 8~12자 내외, 제목의 요약이 아니라 감정·호기심·즉각적 이득 자극". 제목에 이미 있는 단어를 그대로 반복하지 말고 제목과 '보완' 관계로. 과한 어그로 금지(예: "우리 아이 자폐일까?"처럼 거부감 유발하는 직접 단정 금지). 5개를 서로 다른 패턴(호기심형/숫자형/질문형/반전형/결과형)으로. 느낌표·물음표 합쳐 최대 2개.
     좋은 예) "이것" 모르면 고생합니다 / "설마 우리 아이도?" / 똑바로 못 앉는 이유
 - miniCopyLeft: 좌측 상단 8자 이내 후크(예: "혹시 우리 아이도?").
 - miniCopyRight: "25년차 소아발달 재활 전문가" 고정.
 
-[원본 대표 인포그래픽 프롬프트 — 스타일 참고]
+[원본 대표 인포그래픽 프롬프트 — 화풍·소재 참고용(이걸 그대로 베끼지 말고 1~6 규칙대로 썸네일용으로 재구성)]
 ${hero?.prompt ?? "(없음)"}
 
 [출력 — JSON 한 덩어리만, 코드펜스로 감싸서]
