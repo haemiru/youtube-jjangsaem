@@ -83,8 +83,12 @@ export function ImageStep({
         )}
       </div>
 
-      {mode === "manual" && !compact && (
-        <CopyBox text={prompt} label="이 프롬프트로 Google Flow / Gemini 에서 생성 후 png 업로드" rows={5} />
+      {mode === "manual" && (
+        <CopyBox
+          text={prompt}
+          label="이 프롬프트로 Google Flow / Gemini 에서 생성 후 png 업로드"
+          rows={compact ? 3 : 5}
+        />
       )}
 
       {error && <ErrorMsg msg={error} />}
