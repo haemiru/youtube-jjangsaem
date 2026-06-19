@@ -18,6 +18,7 @@ import {
   buildScriptSpacedTxt,
   buildMetadataTxt,
   buildImagePromptsTxt,
+  usedSlideIndices,
 } from "@/lib/assemble";
 import { saveToOutput, downloadZip, type OutFile } from "@/lib/client";
 import { Card, Button, TextArea, ErrorMsg } from "@/components/ui";
@@ -57,6 +58,16 @@ export default function Home() {
   const metadataPrompt = useMemo(() => (blog ? buildMetadataPrompt(blog) : ""), [blog]);
   const thumbnailPrompt = useMemo(() => (blog ? buildThumbnailPrompt(blog) : ""), [blog]);
 
+  // STEP 5 에 띄울 인포그래픽 슬라이드.
+  // 롱폼: 전체. 숏폼: 대본이 실제로 고른 2~4컷만(대본 생성 전에는 비움).
+  const slidesToShow = useMemo(() => {
+    if (!blog) return [];
+    if (!isShort) return blog.imageSlots;
+    if (!script) return [];
+    const used = usedSlideIndices(script);
+    return blog.imageSlots.filter((s) => used.has(s.index));
+  }, [blog, isShort, script]);
+
   function doParse(text: string, name: string) {
     setParseErr("");
     try {
@@ -95,8 +106,21 @@ export default function Home() {
       files.push({ path: "script-spaced.txt", content: buildScriptSpacedTxt(scriptTxt) });
     }
     if (metadata) files.push({ path: "metadata.txt", content: buildMetadataTxt(metadata) });
-    if (blog) files.push({ path: "images/prompts.txt", content: buildImagePromptsTxt(blog, thumbnail, format) });
+    if (blog)
+      files.push({
+        path: "images/prompts.txt",
+        // 숏폼은 대본이 실제로 쓰는 슬라이드 프롬프트만 내보낸다.
+        content: buildImagePromptsTxt(
+          blog,
+          thumbnail,
+          format,
+          isShort && script ? usedSlideIndices(script) : undefined
+        ),
+      });
+    const usedForSave = isShort && script ? usedSlideIndices(script) : null;
     for (const [idx, dataUrl] of Object.entries(slideImages)) {
+      // 숏폼은 대본이 쓰는 슬라이드 이미지만 저장(대본 교체 시 남은 이미지 제외).
+      if (usedForSave && !usedForSave.has(Number(idx))) continue;
       files.push({
         path: `images/slide-${String(idx).padStart(2, "0")}.png`,
         content: dataUrl,
@@ -278,7 +302,14 @@ export default function Home() {
         {blog && (
           <ClaudeStep<MetadataResult>
             prompt={metadataPrompt}
-            parse={(raw) => extractJson<MetadataResult>(raw)}
+            parse={(raw) => {
+              const m = extractJson<MetadataResult>(raw);
+              // 고정댓글에 줄표(엠대시/엔대시)가 남아 있으면 쉼표로 치환(안전망).
+              if (m.pinnedComment) {
+                m.pinnedComment = m.pinnedComment.replace(/\s*[—–―]\s*/g, ", ");
+              }
+              return m;
+            }}
             result={metadata}
             onResult={setMetadata}
             autoLabel="⚡ 메타데이터 생성 (Opus 4.8)"
@@ -344,13 +375,18 @@ export default function Home() {
       )}
 
       {/* STEP 5 — 인포그래픽 이미지 */}
-      <Card title={`인포그래픽 슬라이드 이미지${blog ? ` (${blog.imageSlots.length}장)` : ""}`} step={isShort ? 4 : 5} disabled={!blog}>
+      <Card title={`인포그래픽 슬라이드 이미지${blog ? ` (${slidesToShow.length}장)` : ""}`} step={isShort ? 4 : 5} disabled={!blog}>
         <p style={{ fontSize: 12.5, color: "var(--muted)", margin: "0 0 12px" }}>
           {isShort
-            ? "블로그 내장 프롬프트를 숏폼 1:1 로 보정했습니다. 슬라이드별로 자동(Gemini) 또는 수동(Google Flow)을 선택하세요."
+            ? "숏폼은 대본이 고른 핵심 컷만 만듭니다. 블로그 내장 프롬프트를 숏폼 1:1 로 보정했습니다. 슬라이드별로 자동(Gemini) 또는 수동(Google Flow)을 선택하세요."
             : "블로그 내장 프롬프트를 유튜브 16:9 로 보정했습니다. 슬라이드별로 자동(Gemini) 또는 수동(Google Flow)을 선택하세요."}
         </p>
-        {blog?.imageSlots.map((slot) => {
+        {isShort && blog && !script && (
+          <div style={{ fontSize: 13, color: "#ffcf8b", margin: "0 0 8px" }}>
+            ⚠️ 숏폼은 STEP 2에서 대본을 먼저 생성하면, 대본이 실제로 쓰는 슬라이드만 여기에 표시됩니다.
+          </div>
+        )}
+        {slidesToShow.map((slot) => {
           const p = adaptImagePromptForYoutube(slot.prompt, format);
           return (
             <div key={slot.index} style={{ borderTop: "1px solid var(--border)", padding: "14px 0" }}>

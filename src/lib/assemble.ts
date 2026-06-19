@@ -8,6 +8,17 @@ import {
   type VideoFormat,
 } from "./prompts";
 
+/** 대본이 실제로 가리키는 인포그래픽 슬라이드 번호 집합 (imageRef). 숏폼은 일부만 사용. */
+export function usedSlideIndices(script: ScriptResult | null): Set<number> {
+  const used = new Set<number>();
+  if (script) {
+    for (const s of script.slides) {
+      if (s.imageRef != null) used.add(s.imageRef);
+    }
+  }
+  return used;
+}
+
 /** 영상 폴더용 slug. 영문 슬러그가 마땅찮으면 제목 일부 + 타임스탬프(인자) */
 export function videoSlug(blog: ParsedBlog, fallback?: string): string {
   const fromFile = fallback?.replace(/\.txt$/i, "").trim();
@@ -67,11 +78,13 @@ export function buildScriptTxt(
   const parts: string[] = [];
   if (thumb) parts.push(thumbnailBlock(thumb), "");
   parts.push(TTS_HEADER(blog.meta.title ?? ""), "");
+  // 대본이 실제로 쓰는 슬라이드 수 (숏폼은 전체 중 일부만 사용).
+  const usedCount = usedSlideIndices(script).size || blog.imageSlots.length;
   parts.push(
     `영상 길이 목표: ${script.estimatedMinutes}분`,
     `Hook 패턴: ${script.hookPattern} (${script.hookPatternLabel})`,
     `화자: 짱샘 단독 내레이션`,
-    `시각 트랙: 인포그래픽 슬라이드 ${blog.imageSlots.length}장`,
+    `시각 트랙: 인포그래픽 슬라이드 ${usedCount}장`,
     `※ 대본에는 화자 라벨·연출 메모·괄호 부연 설명을 넣지 않습니다.`,
     ""
   );
@@ -147,7 +160,9 @@ ${meta.pinnedComment ? `■ 고정댓글 후보\n${meta.pinnedComment}\n` : ""}`
 export function buildImagePromptsTxt(
   blog: ParsedBlog,
   thumb: ThumbnailResult | null,
-  format: VideoFormat = "long"
+  format: VideoFormat = "long",
+  /** 지정 시 이 번호의 슬라이드만 출력 (숏폼: 대본이 실제로 쓰는 슬라이드만) */
+  onlyIndices?: Set<number>
 ): string {
   const ratioNote =
     format === "short"
@@ -158,7 +173,11 @@ export function buildImagePromptsTxt(
     ratioNote,
     "",
   ];
-  for (const slot of blog.imageSlots) {
+  const slots =
+    onlyIndices && onlyIndices.size > 0
+      ? blog.imageSlots.filter((s) => onlyIndices.has(s.index))
+      : blog.imageSlots;
+  for (const slot of slots) {
     const n = String(slot.index).padStart(2, "0");
     parts.push(
       `## slide-${n}  [${slot.type}]${slot.isHero ? "  ⭐대표/썸네일 후보" : ""}`,

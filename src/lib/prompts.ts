@@ -199,6 +199,12 @@ export interface MetadataResult {
 }
 
 export function buildMetadataPrompt(blog: ParsedBlog): string {
+  // 고정댓글·디스크립션에 넣을 책 링크.
+  // txt의 '관련 전자책'에 특정 책 URL이 있으면 그걸, 없으면 책방 메인 URL.
+  const bookUrl =
+    blog.meta.relatedEbook && /^https?:\/\//.test(blog.meta.relatedEbook.trim())
+      ? blog.meta.relatedEbook.trim()
+      : "https://jjangsaem.com/n";
   return `${PERSONA}
 
 [작업]
@@ -219,7 +225,7 @@ export function buildMetadataPrompt(blog: ParsedBlog): string {
   · 본문은 이모지로 문단을 나눠 스캐닝하기 좋게. 예시 문단:
       💡 영상 요약: 이 영상에서 다루는 핵심 한두 문장.
       🌱 이런 분들께 추천해요: 가정에서 아이 발달을 돕고 싶은 부모님, 현장의 아동 치료사 선생님.
-      📚 짱샘의 책방「${blog.meta.title ?? ""}」 안내 1줄 (관련 링크: ${blog.meta.relatedEbook ?? "https://jjangsaem.com/n"}).
+      📚 짱샘의 책방「${blog.meta.title ?? ""}」 안내 1줄 (관련 링크: ${bookUrl}).
   · 맨 아래에 해시태그 3~5개만. 대분류→중분류→소분류 순(예: #발달장애아동 #원시반사 #ATNR). 그 이상은 스팸 처리되니 금지.
   · 마크다운 기호 금지, 자연스러운 한국어.
 - 태그: 10~15개 이내. 아래 카테고리를 섞는다.
@@ -227,7 +233,12 @@ export function buildMetadataPrompt(blog: ParsedBlog): string {
   · 연관·확장 키워드 3~5개 (검색할 만한 문장형/단어형)
   · 오타·유사어·약어 2~3개 (자주 틀리는 표기, 영문/한글 표기 변형)
   · 채널 고유 태그 1개 (브랜드명)
-- 고정댓글 후보 1개: 시청자 참여 유도 질문형.
+- 고정댓글 후보 1개: 시청자 참여 유도 질문형. 단, 아래 규칙을 반드시 지킨다.
+  · 맨 앞(첫 줄 또는 첫 문장)에 이 영상과 관련된 책 링크를 자연스럽게 안내한다: ${bookUrl}
+    영상 내용을 더 깊이 보고 싶은 사람이 바로 갈 수 있게, 댓글 도입에 책방/책 링크를 먼저 노출한다.
+    예) "오늘 다룬 6주 순서를 책으로 더 자세히 보고 싶다면 여기에서 확인하세요. ${bookUrl}"
+  · 그다음 댓글 참여를 부르는 질문 1~2개를 잇는다(아이의 상황을 묻는 식).
+  · '—', '–', '―' 같은 줄표(엠대시/엔대시)를 절대 쓰지 말 것. 끊어 읽기는 쉼표·마침표·줄바꿈으로만 처리한다.
 
 [출력 — JSON 한 덩어리만, 코드펜스로 감싸서]
 \`\`\`json
