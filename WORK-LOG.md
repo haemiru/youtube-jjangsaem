@@ -3,7 +3,7 @@
 > 네이버 블로그 txt 한 편(= 유튜브 1편)을 유튜브 대본·인포그래픽·썸네일·제목·디스크립션·태그로 변환하는 웹앱.
 > **돌아왔을 때: 이 파일 §4(돌아오면 곧바로 할 일)부터 읽고 to-do를 제시할 것.**
 
-최종 업데이트: 2026-06-11 (오늘 변경 이력은 §9 참고)
+최종 업데이트: 2026-06-20 (최신 변경 이력은 §10 참고, 그 이전은 §9)
 
 ---
 
@@ -40,10 +40,14 @@ youtue-jjangsaem/
 ├── src/lib/
 │   ├── parser.ts        txt → 메타·본문·섹션·이미지슬롯(내장 프롬프트)·해시태그 구조화 (순수 함수, 서버/클라 공용)
 │   ├── prompts.ts       "짱샘 두뇌": buildScriptPrompt(롱폼/숏폼 분기·Hook 10패턴·TTS친화·SCRIPT_STRUCTURE)
-│   │                    / buildShortsScriptPrompt(SHORTS_STRUCTURE, 60초 미만) / buildMetadataPrompt
-│   │                    / buildThumbnailPrompt(실사풍) / extractJson / adaptImagePromptForYoutube(format)
+│   │                    / buildShortsScriptPrompt(SHORTS_STRUCTURE, 60초 미만, 6~8컷·컷마다 imagePrompt)
+│   │                    / buildMetadataPrompt(고정댓글에 책 URL+줄표금지) / buildThumbnailPrompt(실사풍)
+│   │                    / extractJson / adaptImagePromptForYoutube(format)
+│   │                    ※ ScriptSlide.imagePrompt? = 숏폼 컷 전용 1:1 이미지 프롬프트(블로그 슬라이드 미대응 컷용)
 │   │                    ※ VideoFormat="long"|"short" 타입. 2026 발달/육아 채널 카피·SEO 규칙 내장 (§8 참고)
 │   ├── assemble.ts      결과 → script.txt / script-spaced.txt(글자 띄어쓰기) / metadata.txt / images/prompts.txt
+│   │                    ※ buildRenderSlides(blog,script,format) = STEP4 표시·prompts.txt·저장 PNG 공통 슬라이드 목록
+│   │                      (롱폼=블로그 슬롯 전체 / 숏폼=대본 컷마다 1장, slide-01..NN). usedSlideIndices()는 롱폼 카운트용
 │   ├── anthropic.ts     서버 전용 Claude 호출 (CLAUDE_MODEL = claude-opus-4-8)
 │   ├── gemini.ts        서버 전용 Gemini 이미지 (IMAGE_MODEL = gemini-3.1-flash-image-preview)
 │   │                    generateImage(prompt, aspectRatio) — config.imageConfig.aspectRatio로 비율 강제
@@ -68,10 +72,10 @@ youtue-jjangsaem/
 
 ### 동작 흐름
 1. txt 업로드/붙여넣기 → `parseBlog`로 구조화 미리보기
-2. **대본**: **롱폼/숏폼 토글** 선택. 롱폼=영상 길이(분) 지정 → `buildScriptPrompt`. 숏폼=`buildShortsScriptPrompt`(60초 미만, 250~320자, 핵심 하나 압축) → 자동/수동 → JSON 파싱. 인트로(Hook)+슬라이드별 내레이션+아웃트로
+2. **대본**: **롱폼/숏폼 토글** 선택. 롱폼=영상 길이(분) 지정 → `buildScriptPrompt`. 숏폼=`buildShortsScriptPrompt`(60초 미만, 250~320자, 핵심 하나를 **6~8컷**으로 쪼갬·컷마다 화면 보장) → 자동/수동 → JSON 파싱. 인트로(Hook)+슬라이드별 내레이션+아웃트로
 3. **메타데이터**: 제목 후보 5개 / 디스크립션 / 태그 10~15개 / 고정댓글
 4. **썸네일** (롱폼만, 숏폼은 생략): 메인 문구 5개(택1, 12~18자 또는 두 줄) + **실사풍** 썸네일 이미지 (텍스트 없는 이미지 + 합성용 문구)
-5. **슬라이드 이미지**: 내장 프롬프트를 `adaptImagePromptForYoutube(prompt, format)`로 보정(롱폼=16:9 1920x1080 / 숏폼=1:1 1080x1080) → 슬라이드별 자동/수동. 비율은 Gemini API `aspectRatio`로 강제
+5. **슬라이드 이미지**: `buildRenderSlides`로 목록 구성 → `adaptImagePromptForYoutube`로 비율 보정(롱폼=16:9 1920x1080 / 숏폼=1:1 1080x1080) → 슬라이드별 자동/수동. 비율은 Gemini API `aspectRatio`로 강제. **롱폼=블로그 슬롯 전체, 숏폼=대본 컷마다 1장(대본 N컷 = 이미지 N장, 대본 생성 후 표시)**
 6. **산출물**: `output/<slug>/` 저장(로컬) 또는 ZIP 다운로드
 
 ### 산출물 구조
@@ -90,11 +94,11 @@ output/<slug>/
 
 ## 4. 돌아오면 곧바로 할 일 (TODO) ⭐
 
-**🟢 현재 상태: 구현 완료 + 배포 완료. 2026-06-11 피드백 1차 반영 완료(§9). 🔴 긴급 블로커 없음.**
+**🟢 현재 상태: 구현 완료 + 배포 완료. 2026-06-20 숏폼 컷·이미지·고정댓글 개선 완료(§10). 🔴 긴급 블로커 없음.**
 
 다음 우선순위(모두 선택):
 
-0. **2026-06-11 변경분 배포 결과 확인** — 실사 썸네일·숏폼 대본·`gemini-3.1-flash-image-preview` 이미지가 배포본에서 의도대로 나오는지. 특히 ①preview 모델 404 여부 ②실사 아이 표정·손가락 품질 편차 ③숏폼 1:1 비율 적용. 문제 시 네거티브/모델ID 보강.
+0. **2026-06-20 변경분 실사용 확인** — ①숏폼 대본이 6~8컷으로 나오고 STEP 4 이미지 칸 수 = 대본 컷 수와 정확히 일치하는지 ②훅·마무리 컷의 `imagePrompt`(1:1 카툰 인포그래픽)가 본문 슬라이드와 화풍이 잘 맞는지 ③고정댓글이 책 URL로 시작하고 `—` 줄표가 없는지. 컷 수가 여전히 적게 느껴지면 `SHORTS_STRUCTURE`/`buildShortsScriptPrompt`의 본론 컷 범위(현재 4~6)를 더 늘릴 것.
 1. **사용자 실사용 피드백 반영** — 사용자가 배포 환경에서 직접 테스트 중. 돌아왔을 때 먼저 "테스트 결과/피드백 있었는지" 물을 것. 대본 톤·썸네일 문구·JSON 파싱 등 조정 요청 가능성.
 2. **전체 대본 생성(20k 토큰) 미검증** — 가장 무거운 단계만 비용상 직접 안 돌림. 같은 `/api/claude`+`extractJson` 경로라 정상 가능성 높음. 실패 시 maxTokens·JSON 펜스 파싱 점검.
 3. **슬라이드 일괄 생성 UX** — 현재 슬라이드 9장을 하나씩 `⚡ 생성`. "전체 자동 생성" 버튼(순차/병렬) 추가 검토.
@@ -139,6 +143,8 @@ output/<slug>/
 - 이미지 모델 `gemini-3.1-flash-image-preview`로 이미지 내 한글 렌더 개선(2026-06-11). 단 **썸네일은 여전히 텍스트 없는 이미지 + 합성용 문구** 방식 유지(편집 단계 합성).
   - ⚠️ `gemini-3.1-flash-image-preview`는 preview 모델 — API 호출 시 모델명 404가 나면 정식 ID로 교체 필요.
 - **썸네일 화풍 = 실사풍(photorealistic)**. 본문 슬라이드(카툰 인포그래픽)와 의도적으로 분리. 카툰 일관형은 사용자 요청으로 폐기(§9 참고).
+- ⚠️ **유령 dev 서버 주의** (2026-06-20 실제 발생): 이전 세션의 `next dev`(node)가 죽지 않고 **포트 3000을 계속 점유**하면, 새로 띄운 서버는 3001로 밀리고 브라우저(`localhost:3000`)는 **옛 번들을 계속 서빙**한다(코드 수정이 반영 안 된 것처럼 보임). 증상이 보이면 `Get-NetTCPConnection -LocalPort 3000 -State Listen`으로 PID 확인 → `Stop-Process -Id <PID> -Force` → `.next\dev\lock` 삭제 후 재시작. 서버 교체 후엔 브라우저 **하드 리프레시(Ctrl+Shift+R)** 필수. 새로고침하면 React 상태 초기화되므로 숏폼은 대본을 다시 생성해야 STEP 4에 컷 이미지가 뜬다.
+- ⚠️ `.bkit/`는 bkit 플러그인 상태 폴더 — **커밋하지 말 것**(매 세션 untracked로 뜸). `.gitignore`에 `.bkit/` 추가 여지 있음(아직 미반영).
 
 ---
 
@@ -182,3 +188,29 @@ output/<slug>/
 - 썸네일은 **이미지+편집 합성** 유지(문구는 이미지에 안 박음) + **실사풍**.
 
 **다음에 확인할 것**: 배포본에서 실사 썸네일/숏폼 대본/3.1 이미지모델 실제 결과. 실사 아이 표정·손가락 등 품질 편차 있으면 네거티브 추가 보강. preview 모델 404 여부.
+
+---
+
+## 10. 변경 이력 — 2026-06-20
+
+사용자 실사용 피드백(숏폼 슬라이드 수 불일치·고정댓글·이미지 장수)을 받아 연속 개선. 모두 `main`에 커밋·푸시 완료. (시간순)
+
+1. **숏폼 슬라이드 수 일치 + 고정댓글 책 링크·줄표 규칙** (`9522a5b`)
+   - **문제**: 숏폼 대본은 핵심 슬라이드만 골라 쓰는데(예: 대본 5컷), STEP 5 이미지 단계는 블로그 전체 9장을 그대로 띄워 불일치.
+   - 1차 수정: 숏폼 STEP 5를 **대본이 가리키는 슬라이드(imageRef)만** 표시하도록 필터. `usedSlideIndices()` 헬퍼 추가. → 이후 2번에서 "컷마다 이미지"로 모델 자체를 바꾸며 대체됨.
+   - **고정댓글**: 맨 앞에 **관련 책 링크를 먼저 노출**(txt `관련 전자책` 필드의 URL 우선, 없으면 책방 메인 `https://jjangsaem.com/n`). 줄표(`—`,`–`,`―`) 사용 금지를 프롬프트에 명시 + 파싱 단계 안전망으로 남은 줄표를 쉼표로 치환.
+     - ※ 샘플 txt(`...sleep-recovery-6week.txt`)의 `관련 전자책:`이 실제 책 URL을 담고 있음을 확인하고 그 값을 사용.
+
+2. **숏폼 컷마다 이미지 보장 + 컷 수 증가** (`3936f3f`) — 핵심 변경
+   - **문제 2**: 1번 적용 후, 대본 4컷 중 훅·마무리(imageRef=null)는 이미지가 없어 "대본 4컷인데 이미지 2장"이 됨. 사용자: "컷마다 이미지가 있어야 하고, 이미지 장수가 너무 적다."
+   - 숏폼 대본 구조를 **훅 1 + 본론 4~6 + 마무리 1 = 총 6~8컷**으로 확대(`SHORTS_STRUCTURE`/`buildShortsScriptPrompt`). '핵심 하나'를 여러 비주얼 비트로 쪼갬.
+   - `ScriptSlide`에 **`imagePrompt?`** 추가. 모든 컷이 화면을 갖도록: 본론 컷=블로그 슬라이드 재활용(imageRef), 훅·마무리 등 대응 슬라이드 없는 컷=Claude가 **1:1 카툰 인포그래픽 프롬프트**를 함께 생성. 둘 다 없으면 대표 슬라이드 폴백 → **빈 컷 0개 보장**.
+   - **`buildRenderSlides(blog,script,format)`** 헬퍼 신설: STEP 4 표시·`prompts.txt`·저장 PNG·`script.txt`의 '시각 트랙 N장'을 한 곳에서 일치. 숏폼은 대본 컷 순서대로 `slide-01..NN`(대본 N컷 = 이미지 N장).
+   - 포맷 전환 시 슬라이드 키 체계(롱폼=슬롯번호 / 숏폼=컷순번)가 달라 `slideImages` 초기화.
+
+**확정된 사용자 결정 (이날)**:
+- 숏폼은 **컷마다 이미지 1장**(훅·마무리 포함)이 원칙. 화면이 비는 컷을 만들지 않는다.
+- 숏폼 컷 수는 **6~8컷**으로 비주얼 밀도를 높인다(2~3컷은 정지된 느낌이라 실패).
+- 고정댓글은 **책 링크를 맨 앞에 노출**, 줄표(`—`) 미사용.
+
+**다음에 확인할 것**: §4의 TODO 0번. 숏폼 컷 수·컷별 이미지 일치·훅/마무리 imagePrompt 화풍·고정댓글 URL/줄표. 컷 수가 더 필요하면 본론 컷 범위 상향.
