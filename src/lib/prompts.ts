@@ -54,8 +54,10 @@ export const SCRIPT_STRUCTURE = `영상 구조·이탈 방지 규칙 (육아·�
 /** 숏폼(YouTube Shorts/릴스) 구조 규칙 — 60초 미만 */
 export const SHORTS_STRUCTURE = `숏폼(YouTube Shorts) 구조 규칙 (60초 미만, 짧고 빠른 호흡):
 - 분량: 공백 제외 한국어 발화 기준 총 250~320자(약 45~55초). 절대 60초를 넘기지 말 것.
+- 컷 수: 훅 1개 + 본론 4~6개 + 마무리 1개 = 총 6~8컷. 컷 하나하나가 화면이 바뀌는 '비주얼 비트'다. 컷이 2~3개뿐이면 화면이 정지된 느낌이라 실패. 빠르게 갈아끼운다.
+- 모든 컷은 반드시 화면(이미지)을 가진다. 내레이션만 있고 화면이 빈 컷은 만들지 않는다.
 - [0~3초 훅] 첫 문장에서 즉시 가장 센 통점·반전을 던져 스크롤을 멈추게 한다. 인사·채널 소개·도입부 일절 금지.
-- [본론] 메시지는 '핵심 하나'만. 곁가지·부연·예시 나열 금지. 짧게 끊어지는 문장으로 빠른 템포 유지. 전문 용어가 꼭 필요하면 한 단어로만 풀고 바로 넘어간다.
+- [본론] 메시지는 '핵심 하나'만(주제는 하나로 좁히되 그 하나를 여러 컷으로 잘게 쪼개 빠른 템포로 보여준다). 곁가지·다른 주제 나열 금지. 짧게 끊어지는 문장. 전문 용어가 꼭 필요하면 한 단어로만 풀고 바로 넘어간다.
 - [마무리 3~5초] 여운 남기는 한 줄 + 가벼운 행동 유도(저장·팔로우 중 하나만, 한 번만) + "자세한 건 풀영상에서" 식 풀버전 유도 1줄.
 - 단정적 인과("무조건 좋아집니다") 금지. 짧아도 개별 차이는 한 번 짚는다.`;
 
@@ -100,6 +102,12 @@ export interface ScriptSlide {
   heading: string;
   seconds: number;
   narration: string;
+  /**
+   * 숏폼 전용: 이 컷 화면을 그릴 1:1 인포그래픽 영문 프롬프트.
+   * 블로그 슬라이드를 재활용하는 컷(imageRef 있음)은 비워둘 수 있고,
+   * 훅·마무리처럼 대응 슬라이드가 없는 컷은 반드시 채운다.
+   */
+  imagePrompt?: string;
 }
 
 export interface ScriptResult {
@@ -163,10 +171,12 @@ ${SHORTS_STRUCTURE}
 
 [작업]
 아래 네이버 블로그 글 한 편에서 '가장 임팩트 있는 핵심 하나'만 뽑아, 짱샘이 혼자 내레이션하는 60초 미만 유튜브 숏폼 대본으로 압축한다.
-시각 트랙은 본문 인포그래픽 슬라이드 중 핵심을 받치는 2~4장만 골라 쓴다(전부 쓰지 말 것).
+컷 구성: 훅 1개 + 본론 4~6개 + 마무리 1개 = 총 6~8컷. 컷마다 화면이 바뀌어야 하므로, '핵심 하나'를 여러 컷으로 잘게 쪼개 빠른 템포로 보여준다.
 - 맨 앞 imageRef=null 인 훅 1개: 0~3초, 스크롤을 멈추게 하는 강한 첫 문장(Hook 패턴 A~J 중 가장 센 것).
-- 본론은 핵심 슬라이드 2~4컷. 각 slide 의 narration 은 1~3문장으로 짧게.
+- 본론 4~6컷: 핵심 하나를 단계적으로 풀어가는 컷들. 가능하면 본문 인포그래픽 슬라이드(#1~#${blog.imageSlots.length})를 재활용해 imageRef 에 그 번호를 넣는다(해당 narration 은 그 슬라이드에 실제로 그려진 것을 짚어 설명). 대응되는 슬라이드가 없으면 imageRef=null 로 두고 imagePrompt 를 직접 채운다. 각 narration 은 1~2문장으로 짧게.
 - 맨 끝 imageRef=null 인 마무리 1개: 여운 한 줄 + 저장·팔로우 중 하나만 가볍게 + "자세한 건 풀영상에서" 식 1줄.
+- ★ 모든 컷은 반드시 화면 이미지를 가진다. imageRef 로 블로그 슬라이드를 재활용하지 않는 컷(훅·마무리·신규 본론 컷)은 imagePrompt 를 반드시 채운다.
+  · imagePrompt 작성 규칙: 이 컷의 화면을 그리는 '영문' 프롬프트. 본문 인포그래픽 슬라이드와 같은 화풍(Korean parenting magazine style educational infographic, soft flat shapes, clean line art, calm muted palette, Korean labels in Noto Sans Korean), 단 세로 숏폼용 1:1 1080x1080 square 비율로 명시한다. 이미지 안 텍스트는 짧고 정확한 한국어 한두 단어만. 끝에 "Avoid: photorealistic, 3D render, watermark, distorted Korean text" 류의 네거티브 한 줄.
 - 전체 발화 분량: 공백 제외 한국어 기준 총 250~320자(약 45~55초). 절대 초과 금지.
 - 본문을 그대로 베끼지 말고 말로 설명하듯 재구성. 단정적 인과 금지.
 
@@ -178,8 +188,10 @@ ${SHORTS_STRUCTURE}
   "hookPatternLabel": "패턴 한국어 라벨",
   "estimatedMinutes": 1,
   "slides": [
-    { "imageRef": null, "heading": "훅", "seconds": 3, "narration": "..." },
-    { "imageRef": 1, "heading": "...", "seconds": 12, "narration": "..." }
+    { "imageRef": null, "heading": "훅", "seconds": 3, "narration": "...", "imagePrompt": "Educational infographic ... 1:1 1080x1080 square ... Avoid: ..." },
+    { "imageRef": 2, "heading": "...", "seconds": 9, "narration": "..." },
+    { "imageRef": null, "heading": "...", "seconds": 9, "narration": "...", "imagePrompt": "Educational infographic ... 1:1 1080x1080 square ... Avoid: ..." },
+    { "imageRef": null, "heading": "마무리", "seconds": 5, "narration": "...", "imagePrompt": "Educational infographic ... 1:1 1080x1080 square ... Avoid: ..." }
   ]
 }
 \`\`\`

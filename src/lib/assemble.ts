@@ -19,6 +19,50 @@ export function usedSlideIndices(script: ScriptResult | null): Set<number> {
   return used;
 }
 
+/** STEP 4·산출물에서 렌더할 슬라이드 한 칸. */
+export interface RenderSlide {
+  /** 파일명/표시 순번. 롱폼=블로그 슬롯 번호, 숏폼=대본 컷 순번 */
+  key: number;
+  type: string;
+  isHero: boolean;
+  /** 유튜브/숏폼 비율로 보정된 영문 이미지 프롬프트 */
+  prompt: string;
+}
+
+/**
+ * 이미지 단계에 띄울 슬라이드 목록.
+ * - 롱폼: 블로그 인포그래픽 슬롯 전체.
+ * - 숏폼: 대본 컷마다 1장(컷=비주얼 비트). 블로그 슬라이드 재활용(imageRef) 또는
+ *   대본이 만든 imagePrompt, 둘 다 없으면 대표 슬라이드로 폴백 → 빈 컷이 없도록 보장.
+ */
+export function buildRenderSlides(
+  blog: ParsedBlog,
+  script: ScriptResult | null,
+  format: VideoFormat
+): RenderSlide[] {
+  if (format !== "short") {
+    return blog.imageSlots.map((s) => ({
+      key: s.index,
+      type: s.type,
+      isHero: s.isHero,
+      prompt: adaptImagePromptForYoutube(s.prompt, "long"),
+    }));
+  }
+  if (!script) return [];
+  const hero = blog.imageSlots.find((s) => s.isHero) ?? blog.imageSlots[0];
+  return script.slides.map((cut, i) => {
+    const slot =
+      cut.imageRef != null ? blog.imageSlots.find((s) => s.index === cut.imageRef) : undefined;
+    const raw = slot?.prompt ?? cut.imagePrompt ?? hero?.prompt ?? "";
+    return {
+      key: i + 1,
+      type: slot?.type ?? cut.heading,
+      isHero: slot?.isHero ?? false,
+      prompt: adaptImagePromptForYoutube(raw, "short"),
+    };
+  });
+}
+
 /** 영상 폴더용 slug. 영문 슬러그가 마땅찮으면 제목 일부 + 타임스탬프(인자) */
 export function videoSlug(blog: ParsedBlog, fallback?: string): string {
   const fromFile = fallback?.replace(/\.txt$/i, "").trim();
@@ -73,13 +117,17 @@ ${t.phrases.map((p, i) => `${i + 1}) ${p}`).join("\n")}
 export function buildScriptTxt(
   blog: ParsedBlog,
   script: ScriptResult,
-  thumb: ThumbnailResult | null
+  thumb: ThumbnailResult | null,
+  format: VideoFormat = "long"
 ): string {
+  const isShort = format === "short";
   const parts: string[] = [];
   if (thumb) parts.push(thumbnailBlock(thumb), "");
   parts.push(TTS_HEADER(blog.meta.title ?? ""), "");
-  // 대본이 실제로 쓰는 슬라이드 수 (숏폼은 전체 중 일부만 사용).
-  const usedCount = usedSlideIndices(script).size || blog.imageSlots.length;
+  // 숏폼은 컷마다 이미지 1장(=대본 컷 수), 롱폼은 대본이 가리키는 슬라이드 수.
+  const usedCount = isShort
+    ? script.slides.length
+    : usedSlideIndices(script).size || blog.imageSlots.length;
   parts.push(
     `영상 길이 목표: ${script.estimatedMinutes}분`,
     `Hook 패턴: ${script.hookPattern} (${script.hookPatternLabel})`,
@@ -91,7 +139,12 @@ export function buildScriptTxt(
 
   script.slides.forEach((s, i) => {
     const n = String(i + 1).padStart(2, "0");
-    const ref = s.imageRef ? ` · 🖼 slide-${String(s.imageRef).padStart(2, "0")}.png` : "";
+    // 숏폼: 컷마다 이미지(slide-컷순번). 롱폼: imageRef 있는 컷만.
+    const ref = isShort
+      ? ` · 🖼 slide-${n}.png`
+      : s.imageRef
+        ? ` · 🖼 slide-${String(s.imageRef).padStart(2, "0")}.png`
+        : "";
     parts.push(
       "───────────────────────────────────────────────────────────────",
       `[Slide ${n}] ${s.heading} · ${s.seconds}초${ref}`,
@@ -161,27 +214,23 @@ export function buildImagePromptsTxt(
   blog: ParsedBlog,
   thumb: ThumbnailResult | null,
   format: VideoFormat = "long",
-  /** 지정 시 이 번호의 슬라이드만 출력 (숏폼: 대본이 실제로 쓰는 슬라이드만) */
-  onlyIndices?: Set<number>
+  /** 숏폼은 대본 컷마다 이미지를 만들므로 대본이 필요하다(없으면 빈 목록). */
+  script: ScriptResult | null = null
 ): string {
   const ratioNote =
     format === "short"
-      ? "# 원본 블로그 내장 프롬프트를 숏폼 1:1 1080x1080 으로 보정함"
+      ? "# 숏폼: 대본 컷마다 1:1 1080x1080 이미지 (블로그 슬라이드 재활용 또는 대본 생성 프롬프트)"
       : "# 원본 블로그 내장 프롬프트를 유튜브 16:9 1920x1080 으로 보정함";
   const parts: string[] = [
     "# 인포그래픽 슬라이드 이미지 프롬프트 (Gemini / Google Flow 수동 생성용)",
     ratioNote,
     "",
   ];
-  const slots =
-    onlyIndices && onlyIndices.size > 0
-      ? blog.imageSlots.filter((s) => onlyIndices.has(s.index))
-      : blog.imageSlots;
-  for (const slot of slots) {
-    const n = String(slot.index).padStart(2, "0");
+  for (const slide of buildRenderSlides(blog, script, format)) {
+    const n = String(slide.key).padStart(2, "0");
     parts.push(
-      `## slide-${n}  [${slot.type}]${slot.isHero ? "  ⭐대표/썸네일 후보" : ""}`,
-      adaptImagePromptForYoutube(slot.prompt, format),
+      `## slide-${n}  [${slide.type}]${slide.isHero ? "  ⭐대표/썸네일 후보" : ""}`,
+      slide.prompt,
       ""
     );
   }

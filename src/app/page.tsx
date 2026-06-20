@@ -5,7 +5,6 @@ import {
   buildScriptPrompt,
   buildMetadataPrompt,
   buildThumbnailPrompt,
-  adaptImagePromptForYoutube,
   extractJson,
   type ScriptResult,
   type MetadataResult,
@@ -18,7 +17,7 @@ import {
   buildScriptSpacedTxt,
   buildMetadataTxt,
   buildImagePromptsTxt,
-  usedSlideIndices,
+  buildRenderSlides,
 } from "@/lib/assemble";
 import { saveToOutput, downloadZip, type OutFile } from "@/lib/client";
 import { Card, Button, TextArea, ErrorMsg } from "@/components/ui";
@@ -50,6 +49,8 @@ export default function Home() {
   function changeFormat(f: VideoFormat) {
     setFormat(f);
     setScript(null);
+    // 포맷마다 슬라이드 키 체계가 달라 이미지도 초기화.
+    setSlideImages({});
     if (f === "short") {
       setThumbnail(null);
       setThumbImage(null);
@@ -58,15 +59,12 @@ export default function Home() {
   const metadataPrompt = useMemo(() => (blog ? buildMetadataPrompt(blog) : ""), [blog]);
   const thumbnailPrompt = useMemo(() => (blog ? buildThumbnailPrompt(blog) : ""), [blog]);
 
-  // STEP 5 에 띄울 인포그래픽 슬라이드.
-  // 롱폼: 전체. 숏폼: 대본이 실제로 고른 2~4컷만(대본 생성 전에는 비움).
-  const slidesToShow = useMemo(() => {
-    if (!blog) return [];
-    if (!isShort) return blog.imageSlots;
-    if (!script) return [];
-    const used = usedSlideIndices(script);
-    return blog.imageSlots.filter((s) => used.has(s.index));
-  }, [blog, isShort, script]);
+  // STEP 5 에 띄울 슬라이드.
+  // 롱폼: 블로그 인포그래픽 전체. 숏폼: 대본 컷마다 1장(대본 생성 전에는 비움).
+  const renderSlides = useMemo(
+    () => (blog ? buildRenderSlides(blog, script, format) : []),
+    [blog, script, format]
+  );
 
   function doParse(text: string, name: string) {
     setParseErr("");
@@ -101,26 +99,18 @@ export default function Home() {
   function collectFiles(): OutFile[] {
     const files: OutFile[] = [];
     if (blog && script) {
-      const scriptTxt = buildScriptTxt(blog, script, thumbnail);
+      const scriptTxt = buildScriptTxt(blog, script, thumbnail, format);
       files.push({ path: "script.txt", content: scriptTxt });
       files.push({ path: "script-spaced.txt", content: buildScriptSpacedTxt(scriptTxt) });
     }
     if (metadata) files.push({ path: "metadata.txt", content: buildMetadataTxt(metadata) });
     if (blog)
       files.push({
+        // 숏폼은 대본 컷마다 1장(블로그 재활용 또는 대본 생성 프롬프트).
         path: "images/prompts.txt",
-        // 숏폼은 대본이 실제로 쓰는 슬라이드 프롬프트만 내보낸다.
-        content: buildImagePromptsTxt(
-          blog,
-          thumbnail,
-          format,
-          isShort && script ? usedSlideIndices(script) : undefined
-        ),
+        content: buildImagePromptsTxt(blog, thumbnail, format, script),
       });
-    const usedForSave = isShort && script ? usedSlideIndices(script) : null;
     for (const [idx, dataUrl] of Object.entries(slideImages)) {
-      // 숏폼은 대본이 쓰는 슬라이드 이미지만 저장(대본 교체 시 남은 이미지 제외).
-      if (usedForSave && !usedForSave.has(Number(idx))) continue;
       files.push({
         path: `images/slide-${String(idx).padStart(2, "0")}.png`,
         content: dataUrl,
@@ -286,7 +276,11 @@ export default function Home() {
                   <div key={i} style={{ borderTop: "1px solid var(--border)", padding: "10px 0" }}>
                     <div style={{ fontSize: 12.5, color: "var(--accent-2)", marginBottom: 4 }}>
                       [{String(i + 1).padStart(2, "0")}] {s.heading} · {s.seconds}초
-                      {s.imageRef ? ` · 🖼 slide-${String(s.imageRef).padStart(2, "0")}` : ""}
+                      {isShort
+                        ? ` · 🖼 slide-${String(i + 1).padStart(2, "0")}`
+                        : s.imageRef
+                          ? ` · 🖼 slide-${String(s.imageRef).padStart(2, "0")}`
+                          : ""}
                     </div>
                     <div style={{ fontSize: 13.5, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{s.narration}</div>
                   </div>
@@ -375,36 +369,33 @@ export default function Home() {
       )}
 
       {/* STEP 5 — 인포그래픽 이미지 */}
-      <Card title={`인포그래픽 슬라이드 이미지${blog ? ` (${slidesToShow.length}장)` : ""}`} step={isShort ? 4 : 5} disabled={!blog}>
+      <Card title={`인포그래픽 슬라이드 이미지${blog ? ` (${renderSlides.length}장)` : ""}`} step={isShort ? 4 : 5} disabled={!blog}>
         <p style={{ fontSize: 12.5, color: "var(--muted)", margin: "0 0 12px" }}>
           {isShort
-            ? "숏폼은 대본이 고른 핵심 컷만 만듭니다. 블로그 내장 프롬프트를 숏폼 1:1 로 보정했습니다. 슬라이드별로 자동(Gemini) 또는 수동(Google Flow)을 선택하세요."
+            ? "숏폼은 대본 컷마다 1장씩 만듭니다(훅·마무리 포함). 블로그 슬라이드를 재활용하거나 대본이 만든 프롬프트를 1:1 로 보정했습니다. 슬라이드별로 자동(Gemini) 또는 수동(Google Flow)을 선택하세요."
             : "블로그 내장 프롬프트를 유튜브 16:9 로 보정했습니다. 슬라이드별로 자동(Gemini) 또는 수동(Google Flow)을 선택하세요."}
         </p>
         {isShort && blog && !script && (
           <div style={{ fontSize: 13, color: "#ffcf8b", margin: "0 0 8px" }}>
-            ⚠️ 숏폼은 STEP 2에서 대본을 먼저 생성하면, 대본이 실제로 쓰는 슬라이드만 여기에 표시됩니다.
+            ⚠️ 숏폼은 STEP 2에서 대본을 먼저 생성하면, 대본 컷마다 이미지 칸이 여기에 표시됩니다.
           </div>
         )}
-        {slidesToShow.map((slot) => {
-          const p = adaptImagePromptForYoutube(slot.prompt, format);
-          return (
-            <div key={slot.index} style={{ borderTop: "1px solid var(--border)", padding: "14px 0" }}>
-              <div style={{ fontSize: 13, color: "var(--accent-2)", marginBottom: 8 }}>
-                slide-{String(slot.index).padStart(2, "0")} · {slot.type}
-                {slot.isHero ? " · ⭐대표" : ""}
-              </div>
-              <ImageStep
-                prompt={p}
-                filename={`${slug}-slide-${String(slot.index).padStart(2, "0")}.png`}
-                value={slideImages[slot.index] ?? null}
-                onResult={(d) => setSlideImages((prev) => ({ ...prev, [slot.index]: d }))}
-                aspectRatio={isShort ? "1:1" : "16:9"}
-                compact
-              />
+        {renderSlides.map((slot) => (
+          <div key={slot.key} style={{ borderTop: "1px solid var(--border)", padding: "14px 0" }}>
+            <div style={{ fontSize: 13, color: "var(--accent-2)", marginBottom: 8 }}>
+              slide-{String(slot.key).padStart(2, "0")} · {slot.type}
+              {slot.isHero ? " · ⭐대표" : ""}
             </div>
-          );
-        })}
+            <ImageStep
+              prompt={slot.prompt}
+              filename={`${slug}-slide-${String(slot.key).padStart(2, "0")}.png`}
+              value={slideImages[slot.key] ?? null}
+              onResult={(d) => setSlideImages((prev) => ({ ...prev, [slot.key]: d }))}
+              aspectRatio={isShort ? "1:1" : "16:9"}
+              compact
+            />
+          </div>
+        ))}
       </Card>
 
       {/* STEP 6 — 산출물 */}
