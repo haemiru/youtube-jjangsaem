@@ -120,6 +120,32 @@ export function ModeToggle({
   );
 }
 
+/** 단독 복사 버튼 — 자체 "복사됨" 상태 관리 (render 콜백 안에서 안전하게 쓰기 위함) */
+export function CopyButton({
+  text,
+  label = "📋 복사",
+  copiedLabel = "✓ 복사됨",
+}: {
+  text: string;
+  label?: string;
+  copiedLabel?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <Button
+      small
+      variant="ghost"
+      onClick={async () => {
+        await copyText(text);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }}
+    >
+      {copied ? copiedLabel : label}
+    </Button>
+  );
+}
+
 export function CopyBox({ text, label, rows = 8 }: { text: string; label?: string; rows?: number }) {
   const [copied, setCopied] = useState(false);
   return (

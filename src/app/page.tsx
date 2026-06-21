@@ -20,7 +20,7 @@ import {
   buildRenderSlides,
 } from "@/lib/assemble";
 import { saveToOutput, downloadZip, type OutFile } from "@/lib/client";
-import { Card, Button, TextArea, ErrorMsg } from "@/components/ui";
+import { Card, Button, TextArea, ErrorMsg, CopyButton } from "@/components/ui";
 import { ClaudeStep } from "@/components/ClaudeStep";
 import { ImageStep } from "@/components/ImageStep";
 
@@ -267,26 +267,52 @@ export default function Home() {
             onResult={setScript}
             maxTokens={20000}
             autoLabel="⚡ 대본 생성 (Opus 4.8)"
-            render={(r) => (
+            render={(r) => {
+              const fullScript = r.slides.map((s) => s.narration.trim()).join("\n\n");
+              return (
               <div>
-                <div style={{ fontSize: 13, color: "var(--muted)", marginBottom: 8 }}>
-                  Hook 패턴 {r.hookPattern} ({r.hookPatternLabel}) · 약 {r.estimatedMinutes}분 · 슬라이드 {r.slides.length}컷
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 8,
+                    flexWrap: "wrap",
+                    marginBottom: 8,
+                  }}
+                >
+                  <div style={{ fontSize: 13, color: "var(--muted)" }}>
+                    Hook 패턴 {r.hookPattern} ({r.hookPatternLabel}) · 약 {r.estimatedMinutes}분 · 슬라이드 {r.slides.length}컷
+                  </div>
+                  <CopyButton text={fullScript} label="📋 전체 대본 복사" />
                 </div>
                 {r.slides.map((s, i) => (
                   <div key={i} style={{ borderTop: "1px solid var(--border)", padding: "10px 0" }}>
-                    <div style={{ fontSize: 12.5, color: "var(--accent-2)", marginBottom: 4 }}>
-                      [{String(i + 1).padStart(2, "0")}] {s.heading} · {s.seconds}초
-                      {isShort
-                        ? ` · 🖼 slide-${String(i + 1).padStart(2, "0")}`
-                        : s.imageRef
-                          ? ` · 🖼 slide-${String(s.imageRef).padStart(2, "0")}`
-                          : ""}
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: 8,
+                        marginBottom: 4,
+                      }}
+                    >
+                      <div style={{ fontSize: 12.5, color: "var(--accent-2)" }}>
+                        [{String(i + 1).padStart(2, "0")}] {s.heading} · {s.seconds}초
+                        {isShort
+                          ? ` · 🖼 slide-${String(i + 1).padStart(2, "0")}`
+                          : s.imageRef
+                            ? ` · 🖼 slide-${String(s.imageRef).padStart(2, "0")}`
+                            : ""}
+                      </div>
+                      <CopyButton text={s.narration.trim()} label="📋 대사 복사" />
                     </div>
                     <div style={{ fontSize: 13.5, lineHeight: 1.7, whiteSpace: "pre-wrap" }}>{s.narration}</div>
                   </div>
                 ))}
               </div>
-            )}
+              );
+            }}
           />
         )}
       </Card>
