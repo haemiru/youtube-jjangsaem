@@ -333,28 +333,56 @@ export default function Home() {
             result={metadata}
             onResult={setMetadata}
             autoLabel="⚡ 메타데이터 생성 (Opus 4.8)"
-            render={(r) => (
+            render={(r) => {
+              const metaHeader = (label: string, text: string, copyLabel = "📋 복사") => (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 8,
+                    marginTop: 14,
+                  }}
+                >
+                  <b>{label}</b>
+                  <CopyButton text={text} label={copyLabel} />
+                </div>
+              );
+              return (
               <div style={{ fontSize: 13.5, lineHeight: 1.7 }}>
                 <b>제목 후보</b>
-                <ol style={{ margin: "6px 0 14px", paddingLeft: 20 }}>
+                <ul style={{ listStyle: "none", margin: "6px 0 0", padding: 0 }}>
                   {r.titles.map((t, i) => (
-                    <li key={i}>{t}</li>
+                    <li
+                      key={i}
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "4px 0",
+                      }}
+                    >
+                      <span>{i + 1}) {t}</span>
+                      <CopyButton text={t} />
+                    </li>
                   ))}
-                </ol>
-                <b>디스크립션</b>
-                <div style={{ whiteSpace: "pre-wrap", background: "var(--panel-2)", borderRadius: 8, padding: 12, margin: "6px 0 14px" }}>
+                </ul>
+                {metaHeader("디스크립션", r.description)}
+                <div style={{ whiteSpace: "pre-wrap", background: "var(--panel-2)", borderRadius: 8, padding: 12, margin: "6px 0 0" }}>
                   {r.description}
                 </div>
-                <b>태그 ({r.tags.length})</b>
+                {metaHeader(`태그 (${r.tags.length})`, r.tags.join(", "))}
                 <div style={{ color: "var(--muted)", marginTop: 6 }}>{r.tags.join(", ")}</div>
                 {r.pinnedComment && (
                   <>
-                    <b style={{ display: "block", marginTop: 14 }}>고정댓글</b>
+                    {metaHeader("고정댓글", r.pinnedComment)}
                     <div style={{ color: "var(--muted)", marginTop: 6 }}>{r.pinnedComment}</div>
                   </>
                 )}
               </div>
-            )}
+              );
+            }}
           />
         )}
       </Card>
