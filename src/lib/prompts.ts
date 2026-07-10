@@ -54,7 +54,8 @@ export const SCRIPT_STRUCTURE = `영상 구조·이탈 방지 규칙 (육아·�
 /** 숏폼(YouTube Shorts/릴스) 구조 규칙 — 60초 미만 */
 export const SHORTS_STRUCTURE = `숏폼(YouTube Shorts) 구조 규칙 (60초 미만, 짧고 빠른 호흡):
 - 분량: 공백 제외 한국어 발화 기준 총 250~320자(약 45~55초). 절대 60초를 넘기지 말 것.
-- 컷 수: 훅 1개 + 본론 4~6개 + 마무리 1개 = 총 6~8컷. 컷 하나하나가 화면이 바뀌는 '비주얼 비트'다. 컷이 2~3개뿐이면 화면이 정지된 느낌이라 실패. 빠르게 갈아끼운다.
+- 컷 수: 훅 1개 + 본론 8~11개 + 마무리 1개 = 총 10~13컷(반드시 10컷 이상). 컷 하나하나가 화면이 바뀌는 '비주얼 비트'이고, 이미지는 컷마다 1장씩 붙는다. 장면 전환을 많이 주는 게 목표이니 '핵심 하나'를 최대한 잘게 쪼개 컷을 늘린다. 컷이 5~6개뿐이면 화면이 자주 안 바뀌어 정지된 느낌이라 실패. 빠르게 갈아끼운다.
+- 총 발화 길이(250~320자·60초 미만)는 그대로 두고 컷만 더 잘게 나눈다. 컷이 많아질수록 컷당 발화는 짧아진다(한 컷 = 1문장, 짧으면 한 구절). 억지로 말을 늘려 60초를 넘기지 말 것.
 - 모든 컷은 반드시 화면(이미지)을 가진다. 내레이션만 있고 화면이 빈 컷은 만들지 않는다.
 - [0~3초 훅] 첫 문장에서 즉시 가장 센 통점·반전을 던져 스크롤을 멈추게 한다. 인사·채널 소개·도입부 일절 금지.
 - [본론] 메시지는 '핵심 하나'만(주제는 하나로 좁히되 그 하나를 여러 컷으로 잘게 쪼개 빠른 템포로 보여준다). 곁가지·다른 주제 나열 금지. 짧게 끊어지는 문장. 전문 용어가 꼭 필요하면 한 단어로만 풀고 바로 넘어간다.
@@ -257,9 +258,9 @@ ${CORE_MESSAGE_FIRST}
 
 [작업]
 아래 네이버 블로그 글 한 편에서 '가장 임팩트 있는 핵심 하나'만 뽑아, 짱샘이 혼자 내레이션하는 60초 미만 유튜브 숏폼 대본으로 압축한다.
-컷 구성: 훅 1개 + 본론 4~6개 + 마무리 1개 = 총 6~8컷. 컷마다 화면이 바뀌어야 하므로, '핵심 하나'를 여러 컷으로 잘게 쪼개 빠른 템포로 보여준다.
+컷 구성: 훅 1개 + 본론 8~11개 + 마무리 1개 = 총 10~13컷(반드시 10컷 이상). 컷마다 화면(이미지 1장)이 바뀌므로, 장면 전환을 많이 주려면 '핵심 하나'를 최대한 잘게 쪼개 빠른 템포로 보여준다. 컷이 적으면(6컷 이하) 화면이 자주 안 바뀌어 실패.
 - 맨 앞 imageRef=null 인 훅 1개: 0~3초, 스크롤을 멈추게 하는 강한 첫 문장(Hook 패턴 A~J 중 가장 센 것).
-- 본론 4~6컷: 핵심 하나를 단계적으로 풀어가는 컷들. 가능하면 본문 인포그래픽 슬라이드(#1~#${blog.imageSlots.length})를 재활용해 imageRef 에 그 번호를 넣는다(해당 narration 은 그 슬라이드에 실제로 그려진 것을 짚어 설명). 대응되는 슬라이드가 없으면 imageRef=null 로 두고 imagePrompt 를 직접 채운다. 각 narration 은 1~2문장으로 짧게.
+- 본론 8~11컷: 핵심 하나를 잘게 단계적으로 풀어가는 컷들. 가능하면 본문 인포그래픽 슬라이드(#1~#${blog.imageSlots.length})를 재활용해 imageRef 에 그 번호를 넣는다(해당 narration 은 그 슬라이드에 실제로 그려진 것을 짚어 설명). 대응되는 슬라이드가 없으면 imageRef=null 로 두고 imagePrompt 를 직접 채운다. 각 narration 은 1문장(짧으면 한 구절)으로 아주 짧게 — 컷이 많으니 컷당 발화를 짧게 유지해 전체 60초를 넘기지 않는다.
 - 맨 끝 imageRef=null 인 마무리 1개: 맨 처음 잡은 '핵심 정보(진짜 해법)'를 한 번 더 또렷이 남기며 끝낸다. 부모가 무엇을 기억하고 무엇을 해보면 되는지가 분명해야 한다. 따뜻하게 닫되, 곁가지(순서·루틴 등)나 내용 없는 위로·격언으로 흐리지 말 것. '구독'·'좋아요'·'팔로우' 같은 채널 행동 유도(유튜브에 '팔로우'는 없다), '저장하세요' 식 저장 유도, '풀영상' 식 다른 영상 유도, 정보 제공·면책 안내는 넣지 않는다.
 - ★ 모든 컷은 반드시 화면 이미지를 가진다. imageRef 로 블로그 슬라이드를 재활용하지 않는 컷(훅·마무리·신규 본론 컷)은 imagePrompt 를 반드시 채운다.
   · imagePrompt 작성 규칙: 이 컷의 화면을 그리는 '영문' 프롬프트. 본문 인포그래픽 슬라이드와 같은 화풍(Korean parenting magazine style educational infographic, soft flat shapes, clean line art, calm muted palette, Korean labels in Noto Sans Korean), 단 세로 숏폼용 1:1 1080x1080 square 비율로 명시한다. 이미지 안 텍스트는 짧고 정확한 한국어 한두 단어만. 끝에 "Avoid: photorealistic, 3D render, watermark, distorted Korean text" 류의 네거티브 한 줄.
@@ -278,9 +279,15 @@ ${FINAL_REVIEW}
   "estimatedMinutes": 1,
   "slides": [
     { "imageRef": null, "heading": "훅", "seconds": 3, "narration": "...", "imagePrompt": "Educational infographic ... 1:1 1080x1080 square ... Avoid: ..." },
-    { "imageRef": 2, "heading": "...", "seconds": 9, "narration": "..." },
-    { "imageRef": null, "heading": "...", "seconds": 9, "narration": "...", "imagePrompt": "Educational infographic ... 1:1 1080x1080 square ... Avoid: ..." },
-    { "imageRef": null, "heading": "마무리", "seconds": 5, "narration": "...", "imagePrompt": "Educational infographic ... 1:1 1080x1080 square ... Avoid: ..." }
+    { "imageRef": 2, "heading": "본론1", "seconds": 4, "narration": "..." },
+    { "imageRef": null, "heading": "본론2", "seconds": 4, "narration": "...", "imagePrompt": "Educational infographic ... 1:1 1080x1080 square ... Avoid: ..." },
+    { "imageRef": 3, "heading": "본론3", "seconds": 4, "narration": "..." },
+    { "imageRef": null, "heading": "본론4", "seconds": 4, "narration": "...", "imagePrompt": "Educational infographic ... 1:1 1080x1080 square ... Avoid: ..." },
+    { "imageRef": null, "heading": "본론5", "seconds": 4, "narration": "...", "imagePrompt": "Educational infographic ... 1:1 1080x1080 square ... Avoid: ..." },
+    { "imageRef": null, "heading": "본론6", "seconds": 4, "narration": "...", "imagePrompt": "Educational infographic ... 1:1 1080x1080 square ... Avoid: ..." },
+    { "imageRef": null, "heading": "본론7", "seconds": 4, "narration": "...", "imagePrompt": "Educational infographic ... 1:1 1080x1080 square ... Avoid: ..." },
+    { "imageRef": null, "heading": "본론8", "seconds": 4, "narration": "...", "imagePrompt": "Educational infographic ... 1:1 1080x1080 square ... Avoid: ..." },
+    { "imageRef": null, "heading": "마무리", "seconds": 4, "narration": "...", "imagePrompt": "Educational infographic ... 1:1 1080x1080 square ... Avoid: ..." }
   ]
 }
 \`\`\`
